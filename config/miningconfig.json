@@ -1,0 +1,23 @@
+{
+  "initialDelayMs": 4000,
+  "popupDelayMs": 3000,
+  "activeMiningRetryDelayMs": 30000,
+  "miningLoopFailRetryDelayMs": 60000,
+  "miningSuccessDelayMs": 1000,
+  "maxIterations": 20,
+  "loopIterationDelayMs": 30000,
+  "miningCompleteHashRate": 0,
+  "miningCompleteUnclaimedThreshold": 100000000,
+  "claimMaxThreshold": 10800000000,
+  "claimTimeThreshold": 120,
+  "mineButtonTrigger": "MINE",
+  "confirmButtonText": "Confirm",
+  "stopClaimButtonText": "STOP & CLAIM",
+  "stopAnywayButtonText": "STOP ANYWAY",
+  "wss": "wss://vkqjvwxzsxilnsmpngmc.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrcWp2d3h6c3hpbG5zbXBuZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYwODExMjMsImV4cCI6MjA0MTY1NzEyM30.u9gf6lU2fBmf0aiC7SYH4vVeWMRnGRu4ZZ7xOGl-XuI&eventsPerSecond=5&vsn=1.0.0",
+  "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrcWp2d3h6c3hpbG5zbXBuZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYwODExMjMsImV4cCI6MjA0MTY1NzEyM30.u9gf6lU2fBmf0aiC7SYH4vVeWMRnGRu4ZZ7xOGl-XuI",
+  "requiredActiveMiners": 10,
+  "skipMiningIfInactive": true,
+  "skipMiningOnFailure": true,
+  "cycleDelayMs": 10000
+}

@@ -1,0 +1,10 @@
+{
+    "rpcEndpoint": "https://api.mainnet-beta.solana.com",
+    "wpondTransferTimeThreshold": 900,
+    "rewardsWalletAddress": "1orFCnFfgwPzSgUaoK6Wr3MjgXZ7mtk8NGz9Hh4iWWL",
+    "wpondTokenMint": "3JgFwoYV74f6LwWjQWnr3YDPFnmBdwQfNyubv99jqUoq",
+    "discountWalletAddresses": [
+      "AYg4dKoZJudVkD7Eu3ZaJjkzfoaATUqfiv8w8pS53opT"
+    ]
+  }
+  

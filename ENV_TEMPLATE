@@ -1,0 +1,14 @@
+
+# YOU DO NOT NEED TO SAVE YOUR PKS HERE IF YOU ARE HAPPY TO ENTER MANUALLY WHEN YOU START THE PROGRAM - CAUTION ADVISED!!!
+
+# IMPORTANT!!! ONCE YOU HAVE POPULATED VARIABLE YOU NEED TO RENAME THE FILE TO ".env"
+
+# Make sure PK and ADDRESS are corresponding for miner number, add as many miners as you wish
+MINER1_PK="<MINER1_PRIVATE_KEY>"
+MINER2_PK="<MINER1_PRIVATE_KEY>"
+MINER1_ADDRESS="<MINER1_ADDRESS>"
+MINER2_ADDRESS="<MINER2_ADDRESS>"
+
+# REQUIRED TO RUN - local path to phantom extension installer for chromme, you must source this yourself from known trusted sources
+
+EXTNS="<PATH_HERE>"

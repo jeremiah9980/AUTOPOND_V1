@@ -1,0 +1,40 @@
+{
+  "name": "autopond",
+  "version": "1.0.0",
+  "description": "pond0x DEX automation tools",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx tsc && node ./out/index.js",
+    "test": "test"
+  },
+  "author": "sd",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/inquirer": "^9.0.7",
+    "eslint": "^9.21.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "better-sqlite3": "^11.8.1",
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "dotenv": "^16.4.7",
+    "inquirer": "^12.4.1",
+    "punycode": "^2.3.1",
+    "puppeteer": "^23.11.1",
+    "tslib": "^2.8.1",
+    "ws": "^8.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drewbie1234/autopond.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/drewbie1234/autopond/issues"
+  },
+  "homepage": "https://github.com/drewbie1234/autopond#readme"
+}

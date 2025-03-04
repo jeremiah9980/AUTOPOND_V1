@@ -1,0 +1,17 @@
+{
+  "tokenA": "SOL",
+  "tokenB": "USDT",
+  "tokenAMint": "",
+  "tokenBMint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+  "tokenALowThreshold": 0.01,
+  "tokenBLowThreshold": 3,
+  "tokenAPossibleAmounts": [0.000052, 0.000054, 0.000058],
+  "tokenBPossibleAmounts": [0.01, 0.02, 0.015],
+  "tokenARewardAmounts": [0.000052, 0.000054, 0.000053],
+  "tokenBRewardAmounts": [0.01, 0.01, 0.03],
+  "swapRounds": 20,
+  "swapRewardsActive": false,
+  "enableRewardsCheck": false,
+  "skipSwapIfNoRewards": false,
+  "turboswap": true
+}

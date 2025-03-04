@@ -1,0 +1,13 @@
+{
+  "wizardMode": true,
+  "defaultMode": "Mine and Swap",
+  "loggingEnabled": true,
+  "cycleDelayMs": 3000,
+  "defaultCycleCount": 10,
+  "liveDecodedDisplayLimit": 20,
+  "myRigAddresses": [
+    "5q6gVQuZJvMnqpxoS3yAgipyUJ69kYZWuCmTY4i6nA2X",
+    "3jRksPvB4EXwo737Jww5Ncd35tqw6VP3HBr31MMep9di"
+  ],
+  "watchRigAddresses": []
+}
