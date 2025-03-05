@@ -1,5 +1,8 @@
 # AutoPond
 
+![Alt text](./screenshots/banner.png)
+
+
 AutoPond is a powerful automation tool designed to streamline interactions with the [Pond0x](https://pond0x.com) decentralized exchange. It automates mining and token swapping on the Solana blockchain, integrating seamlessly with the Phantom wallet. Using browser automation via Puppeteer and real-time WebSocket monitoring, AutoPond offers both an interactive wizard for hands-on control and a set-and-forget mode for continuous operation.
 
 ## Table of Contents
@@ -70,6 +73,8 @@ See [Application Flow and Logic](#application-flow-and-logic) for deeper insight
 ## Modes of Operation
 
 AutoPond offers several modes to suit your operational needs, configured via `appconfig.json`. The wizard guides you through mode selection and cycle execution, prompting you for the number of cycles you wish to run.
+
+![Alt text](./screenshots/banner.png)
 
 ### Wizard Mode
 When `wizardMode` is set to `true`, you can choose from these options:
