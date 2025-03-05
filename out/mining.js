@@ -1,10 +1,4 @@
 "use strict";
-/**
- * @file miningloop.ts
- * @description Automates a mining session by tracking metrics, handling claims,
- * and updating aggregated mining metrics in the database. This function reads LCD values,
- * updates in-memory metrics, and determines when to claim tokens based on configured thresholds.
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.miningloop = void 0;
 const helpers_1 = require("./utils/helpers");
@@ -14,13 +8,10 @@ const pagehandlers_1 = require("./utils/pagehandlers");
 const configloader_1 = require("./utils/configloader");
 const mineMetricsDb_1 = require("./db/mineMetricsDb");
 const phantom_1 = require("./phantom");
-// Load the mining configuration.
 const miningConfig = (0, configloader_1.loadMiningConfig)();
 /**
- * Reads elements with the class "lcdbox" on the page and parses their innerText into an LCD object.
- *
- * @param page - The Puppeteer page instance.
- * @returns A promise resolving to an LCD object.
+ * updatelcd:
+ * Reads elements with the class "lcdbox" on the page and parses their innerText.
  */
 const updatelcd = async (page) => {
     const lcd = await page.evaluate(() => {
@@ -32,7 +23,6 @@ const updatelcd = async (page) => {
             HASHRATE: null,
             BOOST: null,
         };
-        // Query all elements with class "lcdbox" and parse key-value pairs.
         Array.from(document.querySelectorAll(".lcdbox")).forEach((v) => {
             const kv = v.innerText.replace(/\n/g, "").split(":");
             if (kv.length > 1 && kv[0] in LCD) {
@@ -44,24 +34,20 @@ const updatelcd = async (page) => {
     return lcd;
 };
 /**
- * Automates a mining session by tracking metrics, handling claims, and updating the aggregated metrics.
- *
- * @param page - The Puppeteer page instance.
- * @param browser - The Puppeteer browser instance.
- * @returns A promise that resolves to true when the mining loop completes.
+ * miningloop:
+ * Automates a mining session, tracking metrics, handling claims, and updating the database.
  */
 const miningloop = async (page, browser) => {
-    // Display start message and delay before beginning.
     (0, print_1.printMessageLinesBorderBox)(["Starting mining loop..."], borderboxstyles_1.miningStyle);
     await (0, helpers_1.d)(miningConfig.initialDelayMs);
-    // Trigger the mining popup to start the session.
+    // Trigger the mining popup
     await (0, phantom_1.handlephanpopup)(page, browser, miningConfig.confirmButtonText, miningConfig.mineButtonTrigger);
     await (0, helpers_1.d)(miningConfig.popupDelayMs);
-    // Read the initial LCD values.
+    // Read initial LCD values
     const initialLCD = await updatelcd(page);
     const sessionStartTime = Date.now();
     let previousUpdateTime = sessionStartTime;
-    // Initialize in-memory mining metrics.
+    // Initialize in-memory metrics
     let currentMiningMetrics = {
         claimedAmount: 0,
         unclaimedAmount: (0, helpers_1.parseFormattedNumber)(initialLCD.UNCLAIMED || "0"),
@@ -74,21 +60,20 @@ const miningloop = async (page, browser) => {
         extraMiningData: {},
         incrementalExtraData: { checkCount: 0 },
     };
-    // Mark the initial check.
     if (!currentMiningMetrics.incrementalExtraData) {
         currentMiningMetrics.incrementalExtraData = { checkCount: 0 };
     }
     currentMiningMetrics.incrementalExtraData.initial = 1;
-    // Update aggregated metrics with the initial state.
     (0, mineMetricsDb_1.updateAggregatedMiningMetrics)(currentMiningMetrics);
-    delete currentMiningMetrics.incrementalExtraData.initial;
+    if (currentMiningMetrics.incrementalExtraData) {
+        delete currentMiningMetrics.incrementalExtraData.initial;
+    }
     let minecomplete = false;
-    let c = 0; // Iteration counter.
+    let c = 0;
     let prevReward = currentMiningMetrics.unclaimedAmount;
     let finalLCD = null;
     try {
         while (!minecomplete) {
-            // If maximum iterations reached, attempt to claim tokens.
             if (c > miningConfig.maxIterations) {
                 (0, print_1.printMessageLinesBorderBox)([
                     "Max iterations reached.",
@@ -96,7 +81,8 @@ const miningloop = async (page, browser) => {
                     "Attempting to claim if tokens available...",
                 ], borderboxstyles_1.miningStyle);
                 if (currentMiningMetrics.unclaimedAmount > 0) {
-                    currentMiningMetrics.claimedAmount = currentMiningMetrics.unclaimedAmount;
+                    currentMiningMetrics.claimedAmount =
+                        currentMiningMetrics.unclaimedAmount;
                     try {
                         await (0, pagehandlers_1.clickbyinnertxt)(page, "button", [
                             miningConfig.stopClaimButtonText,
@@ -122,11 +108,10 @@ const miningloop = async (page, browser) => {
                 minecomplete = true;
                 break;
             }
-            // Ensure incremental metrics object exists.
             if (!currentMiningMetrics.incrementalExtraData) {
                 currentMiningMetrics.incrementalExtraData = { checkCount: 0 };
             }
-            // Read the latest LCD values.
+            // Read latest LCD values
             const lcd = await updatelcd(page);
             finalLCD = lcd;
             const tnum = parseInt(lcd.TIME) || 0;
@@ -135,7 +120,6 @@ const miningloop = async (page, browser) => {
             const statString = (0, helpers_1.parseString)(lcd.STATUS);
             const connectionString = (0, helpers_1.parseString)(lcd.CONNECTION);
             const bnum = lcd.BOOST ? parseFloat(lcd.BOOST) || 0 : 0;
-            // Display current LCD metrics.
             (0, print_1.printMessageLinesBorderBox)([
                 `CONNECTION = ${connectionString}`,
                 `STATUS = ${statString}`,
@@ -144,8 +128,8 @@ const miningloop = async (page, browser) => {
                 `HASHRATE = ${hnum}`,
                 `BOOST = ${bnum}`,
             ], borderboxstyles_1.miningStyle);
-            // Update unclaimed tokens metric.
             currentMiningMetrics.unclaimedAmount = unum;
+            // Metrics Update Logic
             if (unum > prevReward) {
                 const diff = unum - prevReward;
                 currentMiningMetrics.unclaimedIncrement = diff;
@@ -160,34 +144,31 @@ const miningloop = async (page, browser) => {
                 currentMiningMetrics.unclaimedIncrement = 0;
                 c++;
             }
-            // Update average hash rate.
             const previousCount = currentMiningMetrics.incrementalExtraData.checkCount;
             const newCount = previousCount + 1;
             currentMiningMetrics.avgHashRate =
                 (currentMiningMetrics.avgHashRate * previousCount + hnum) / newCount;
             currentMiningMetrics.incrementalExtraData.checkCount = newCount;
-            // Update mining time metrics.
             const now = Date.now();
             currentMiningMetrics.miningTimeMin = parseFloat(((now - sessionStartTime) / 60000).toFixed(2));
             currentMiningMetrics.miningTimeIncrement = parseFloat(((now - previousUpdateTime) / 60000).toFixed(2));
             previousUpdateTime = now;
-            // Update max boost if a new maximum is detected.
             if (bnum > currentMiningMetrics.maxBoost) {
                 (0, print_1.printMessageLinesBorderBox)([`New max boost detected: ${bnum}`], borderboxstyles_1.miningStyle);
                 currentMiningMetrics.maxBoost = bnum;
             }
-            // Update iteration count and aggregated metrics.
             currentMiningMetrics.incrementalExtraData.iterations = c;
             (0, mineMetricsDb_1.updateAggregatedMiningMetrics)(currentMiningMetrics);
-            // Reset incremental metrics for the next iteration.
             currentMiningMetrics.unclaimedIncrement = 0;
             currentMiningMetrics.miningTimeIncrement = 0;
-            for (const key in currentMiningMetrics.incrementalExtraData) {
-                if (key !== "final" && key !== "initial") {
-                    currentMiningMetrics.incrementalExtraData[key] = 0;
+            if (currentMiningMetrics.incrementalExtraData) {
+                for (const key in currentMiningMetrics.incrementalExtraData) {
+                    if (key !== "final" && key !== "initial") {
+                        currentMiningMetrics.incrementalExtraData[key] = 0;
+                    }
                 }
             }
-            // Evaluate claim conditions.
+            // Claim Conditions
             if (unum >= miningConfig.claimMaxThreshold) {
                 (0, print_1.printMessageLinesBorderBox)([
                     "Max claim condition met:",
@@ -282,7 +263,6 @@ const miningloop = async (page, browser) => {
         }
     }
     finally {
-        // Mark final iteration and update aggregated metrics.
         if (!currentMiningMetrics.incrementalExtraData) {
             currentMiningMetrics.incrementalExtraData = {};
         }
