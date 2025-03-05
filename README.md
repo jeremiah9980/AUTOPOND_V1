@@ -134,8 +134,9 @@ Controls overall behavior:
   "defaultCycleCount": 10,
   "liveDecodedDisplayLimit": 20,
   "myRigAddresses": [
-    "5q6gVQuZJvMnqpxoS3yAgipyUJ69kYZWuCmTY4i6nA2X",
-    "3jRksPvB4EXwo737Jww5Ncd35tqw6VP3HBr31MMep9di"
+    "<MINER 1 ADDRES HERE>",
+    "<ADD MORE MINERS>"
+    
   ],
   "watchRigAddresses": []
 }
@@ -338,9 +339,6 @@ AutoPond is built around a configuration-driven workflow that automates mining a
 
 - **Swap Configuration:**  
   Defines the tokens to swap, minimum balance thresholds, possible swap amounts, and optional rewards settings. These configurations drive the token selection logic and the overall behavior of the swap rounds.
-
-By utilizing these well-defined processes and configuration files, AutoPond ensures efficient, real-time performance tracking and a resilient automation flow that adapts to current network conditions and operational metrics.
-
 
 ## Installation and Setup
 
