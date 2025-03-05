@@ -374,28 +374,16 @@ Get AutoPond running with these steps:
 ```MINER1_ADDRESS:``` Address from your Phantom wallet.
 ```EXTNS:``` File path to phantom extension installer.
 
-5. **Configure Settings#:** Modify ```./config/``` to adjust any of Configure Settings:
+5. **Configure Settings#:** Modify ```./config/``` to adjust any of Configure Settings defaults:
 - `appconfig.json`
 - `miningconfig.json`
 - `swapconfig.json`
 - `solanaconfig.json`
 
-
-## Phantom Wallet Setup
-
-AutoPond needs a Phantom wallet for secure operations:
-
-1. **Install the Extension:**
-   Add [Phantom](https://phantom.app) to Chrome or your browser.
-
-2. **Create a Burner Wallet:**
-   - Open Phantom, select "Create New Wallet," and follow the prompts.
-   - Save your recovery phrase securely—use this wallet only for AutoPond.
-   - Export the private key (Settings > Export Private Key) for `.env`.
-
-3. **Security Warning:**
-   - **Use a Burner Wallet:** Avoid your main wallet to protect funds.
-   - **Keep Secrets Safe:** Never share `MINER1_PK` or commit `.env` to git. See [Phantom Security Guide](https://support.phantom.app/hc/en-us/articles/360020005092).
+6. **Run Autopond**
+  ```bash
+  npm start
+  ```
 
 
 ## Dependencies
