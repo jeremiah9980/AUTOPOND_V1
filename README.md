@@ -94,6 +94,31 @@ When `wizardMode` is set to `true`, you can choose from these options:
 
 Before execution, you’ll also be prompted to confirm wallet readiness and choose an account import method, ensuring a secure launch of the browser and proper navigation to the platform.
 
+## Phantom Wallet Integration
+
+AutoPond streamlines the Phantom Wallet onboarding process to simplify account setup and ensure secure access. Key features include:
+
+- **Account Import Options:**  
+  Choose between manual import or automated import using private keys stored in your environment variables.
+  - **Manual Import:**  
+    Follow the on-screen instructions in the Phantom pop-up to create or import your wallet.
+  - **Auto-Import (🔮):**  
+    Retrieve your private key from `.env` and automatically fill in the wallet setup fields.
+
+- **Seamless UI Automation:**  
+  AutoPond simulates smooth mouse movements and clicks to:
+  - Populate the wallet "Name" and "Private key" fields.
+  - Enter and confirm your wallet password.
+  - Accept Terms-of-Service and complete the import process with minimal manual intervention.
+
+- **Phantom Pop-Up Handling:**  
+  The system detects the Phantom Wallet pop-up and automatically clicks the required buttons (such as "Import" or "Continue") to advance the onboarding flow.
+
+**Warning:** Storing private keys in your `.env` file can expose sensitive information if the file is not properly secured. **Always use a burner wallet for testing purposes** and ensure your environment files are protected and excluded from version control. DON NOT EVER DELETE .gitignore and commit your /env as this will expose your PRIVATE KEY!!
+
+This integrated process ensures that your Phantom Wallet is quickly and securely set up, allowing you to focus on mining and swapping operations without manual hassle.
+
+
 ## Configuration
 
 AutoPond relies on four JSON files in `./config/` for customization. Here’s what’s currently set:
