@@ -1,24 +1,11 @@
-/**
- * @file runmining.ts
- * @description Executes the mining process.
- */
-
 import { Browser, Page } from "puppeteer";
 import { printMessageLinesBorderBox } from "../print";
 import { MiningConfig } from "../../types/config";
 import { miningStyle } from "../styles/borderboxstyles";
 import { checkActiveMining } from "../../websocket";
-import { miningloop } from "../../mining";
 import chalk from "chalk";
+import { MiningSession } from "../../mining";
 
-/**
- * Runs the mining process.
- *
- * @param page - The Puppeteer page to operate on.
- * @param browser - The Puppeteer browser instance.
- * @param mining - The mining configuration.
- * @returns A promise that resolves to true if mining succeeds, otherwise false.
- */
 export async function runMining(
   page: Page,
   browser: Browser,
@@ -26,16 +13,18 @@ export async function runMining(
 ): Promise<boolean> {
   let attemptCount = 0;
   try {
-    // Navigate to the mining page.
-    printMessageLinesBorderBox(["Navigating to mining page..."], miningStyle);
+    printMessageLinesBorderBox(
+      ["🔄 Navigating to mining page..."],
+      miningStyle
+    );
     await page.goto("https://pond0x.com/mining", {
       waitUntil: "networkidle0",
       timeout: 60000,
     });
+
     while (true) {
-      // Check active mining status.
       printMessageLinesBorderBox(
-        ["Checking active mining status..."],
+        ["🔍 Checking active mining status via websocket (30s)..."],
         miningStyle
       );
       const active = await checkActiveMining(30000);
@@ -43,36 +32,51 @@ export async function runMining(
         [`Status: ${active ? "Active" : "Inactive"}`],
         miningStyle
       );
-      // Proceed with mining process regardless of active status.
+
+      // If not active, you might want to wait and try again.
+      // (The original code did nothing if active was false.)
+      if (!active) {
+        await new Promise((res) => setTimeout(res, 30000));
+        continue;
+      }
+
       printMessageLinesBorderBox(
-        ["Active mining detected; proceeding with mining process..."],
+        ["✅ Active mining detected; proceeding with mining process..."],
         miningStyle
       );
       attemptCount++;
       printMessageLinesBorderBox(
-        [`Mining attempt #${attemptCount}...`],
+        [`⛏️  Mining attempt #${attemptCount}...`],
         miningStyle
       );
-      const mineComplete = await miningloop(page, browser);
+
+      // Create and run a new mining session using the refactored class.
+      const session = new MiningSession(page, browser);
+      const mineComplete = await session.start();
+
       if (mineComplete) {
         printMessageLinesBorderBox(
-          ["Mining process completed successfully."],
+          ["🎉 Mining process completed successfully."],
           miningStyle
         );
-        await new Promise((res) => setTimeout(res, mining.miningSuccessDelayMs));
+        await new Promise((res) =>
+          setTimeout(res, mining.miningSuccessDelayMs)
+        );
         return true;
       } else {
-        printMessageLinesBorderBox(["Mining attempt failed."], miningStyle);
+        printMessageLinesBorderBox(["❌ Mining attempt failed."], miningStyle);
         if (mining.skipMiningOnFailure) {
           printMessageLinesBorderBox(
-            ["skipMiningOnFailure enabled; skipping mining."],
+            ["🛑 skipMiningOnFailure enabled; skipping mining."],
             miningStyle
           );
           await new Promise((res) => setTimeout(res, 1000));
           return true;
         } else {
           printMessageLinesBorderBox(
-            [`Waiting for ${mining.miningLoopFailRetryDelayMs} ms before retrying...`],
+            [
+              `⏳ Waiting for ${mining.miningLoopFailRetryDelayMs} ms before retrying...`,
+            ],
             miningStyle
           );
           await new Promise((res) =>
