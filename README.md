@@ -74,7 +74,7 @@ See [Application Flow and Logic](#application-flow-and-logic) for deeper insight
 
 AutoPond offers several modes to suit your operational needs, configured via `appconfig.json`. The wizard guides you through mode selection and cycle execution, prompting you for the number of cycles you wish to run.
 
-![Alt text](./screenshots/banner.png)
+![Alt text](./screenshots/wizard.png)
 
 ### Wizard Mode
 When `wizardMode` is set to `true`, you can choose from these options:
