@@ -349,10 +349,10 @@ AutoPond is built around a configuration-driven workflow that automates mining a
 
 Get AutoPond running with these steps:
 
-1. **Clone the Repository:**
+1. **Clone the Repository:** Navigate to the directory (folder) you wish to clone autopond into ( ```cd ./<desired directory>``` ) and run the following code.
    ```bash
-   git clone https://github.com/your-username/autopond.git
-   cd autopond
+   git clone https://github.com/drewbie1234/AUTOPOND_V1.git
+   cd ./autopond
    ```
 
 2. **Install Node.js:** Download and install Node.js (v22.13.1) 
