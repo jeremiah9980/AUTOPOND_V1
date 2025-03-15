@@ -1,9 +1,4 @@
 "use strict";
-/**
- * @file wizard.ts
- * @description Contains the main wizard loop for the autopond process, including mode selection,
- * browser/wallet setup, cycle execution, and configuration viewing/modification prompts.
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runWizard = runWizard;
 exports.promptContinueOrConfig = promptContinueOrConfig;
@@ -25,17 +20,9 @@ const runmining_1 = require("./modes/runmining");
 const runsettings_1 = require("./modes/runsettings");
 const phantom_1 = require("../phantom");
 const printtable_1 = require("./tables/printtable");
-/**
- * Runs the main wizard loop for autopond. This function performs the following tasks:
- * - Prompts the user to select a mode of operation.
- * - Handles mode-specific actions (e.g., launching the Magma Engine Viewer).
- * - Sets up the wallet and browser, including wallet prompts and navigation.
- * - Executes cycles based on the selected mode and rounds.
- * - Displays session end reports and handles cleanup.
- *
- * @param {FullConfig} fullConfig - The full configuration object for autopond.
- * @returns {Promise<void>} A promise that resolves when the wizard execution completes.
- */
+// ----------------------------------------------------------------------
+// runWizard: the main wizard loop
+// ----------------------------------------------------------------------
 async function runWizard(fullConfig) {
     const { app, mining, swap } = fullConfig;
     // Outer loop: after a complete run, re‑prompt for mode selection.
@@ -208,7 +195,7 @@ async function runWizard(fullConfig) {
             "Total Cycles": effectiveRounds > 0 ? effectiveRounds : "Infinite",
             activeMiningRetryDelayMs: mining.activeMiningRetryDelayMs,
             miningLoopFailRetryDelayMs: mining.miningLoopFailRetryDelayMs,
-            miningSuccessDelayMs: mining.miningSuccessDelayMs,
+            miningSuccessDelayMs: mining.miningSuccessDelayMs
         };
         if (effectiveMode === "Mine" || effectiveMode === "Mine and Swap") {
             (0, printtable_1.printTable)("⛏️  Mining config", mining);
@@ -293,12 +280,6 @@ async function runWizard(fullConfig) {
         }
     } // end outer while
 }
-/**
- * Prompts the user to press a key to either view/modify configuration settings or continue.
- *
- * @param {any} configs - The configuration object to be viewed or modified.
- * @returns {Promise<boolean>} A promise that resolves to true if configurations were viewed/modified, false otherwise.
- */
 async function promptContinueOrConfig(configs) {
     const width = 62;
     const line1 = (0, print_1.centerText)("Press 's' to view or modify configuration settings", width);
@@ -348,12 +329,6 @@ async function promptContinueOrConfig(configs) {
         });
     });
 }
-/**
- * Waits for the user to press any key before continuing.
- *
- * @param {string} [message=chalk.bold("Press any key to continue...")] - The message to display to the user.
- * @returns {Promise<void>} A promise that resolves when a key is pressed.
- */
 async function waitForAnyKey(message = chalk_1.default.bold("Press any key to continue...")) {
     process.stdout.write(message);
     return new Promise((resolve) => {

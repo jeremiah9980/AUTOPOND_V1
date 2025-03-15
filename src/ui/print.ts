@@ -1,23 +1,10 @@
-/**
- * @file printUtils.ts
- * @description Provides helper functions for formatting output in border boxes,
- * printing session end reports and swap summaries, as well as general text formatting utilities.
- */
-
 import chalk from "chalk";
 import Table from "cli-table3";
 import { generalStyle, swappingStyle } from "./styles/borderboxstyles";
-import {
-  getNetTokenChange,
-  getSplTokenDecimals,
-  parseReferralFeeFromTx,
-} from "../solana";
+import { getNetTokenChange, getSplTokenDecimals, parseReferralFeeFromTx } from "../solana";
 import { printTable } from "./tables/printtable";
 import { swappingTableOptions } from "./styles/tableStyles";
 
-/**
- * Interface describing the style properties for a border box.
- */
 export interface BorderBoxStyle {
   borderColor: string;
   textColor: string;
@@ -28,10 +15,7 @@ export interface BorderBoxStyle {
 }
 
 /**
- * Formats an object into a multi-line string with each key/value pair on its own line.
- *
- * @param obj - The object to format.
- * @returns A formatted string.
+ * Helper function to format an object as a multi-line string.
  */
 export function formatObject(obj: any): string {
   return Object.entries(obj)
@@ -39,12 +23,6 @@ export function formatObject(obj: any): string {
     .join("\n");
 }
 
-/**
- * Prints an array of strings inside a border box with custom styles.
- *
- * @param lines - The lines of text to display.
- * @param style - The styling options for the border box.
- */
 export function printMessageLinesBorderBox(
   lines: string[],
   style: BorderBoxStyle
@@ -67,7 +45,7 @@ export function printMessageLinesBorderBox(
   const borderBgFn =
     (chalk as any)[`bg${capitalize(borderBgColor)}`] || ((s: string) => s);
 
-  // Define custom border characters.
+  // Define your custom border characters.
   const customChars = {
     top: borderBgFn("═"),
     "top-mid": borderBgFn("╤"),
@@ -86,7 +64,7 @@ export function printMessageLinesBorderBox(
     middle: borderBgFn("│"),
   };
 
-  // Define empty characters for a borderless look.
+  // Define "empty" characters for a borderless look.
   const emptyChars = {
     top: "",
     "top-mid": "",
@@ -109,6 +87,7 @@ export function printMessageLinesBorderBox(
     head: [],
     colWidths: [tableWidth],
     style: { border: [borderColor], head: [borderColor] },
+    // Use customChars only if withBorder is true; otherwise, use emptyChars.
     chars: withBorder ? customChars : emptyChars,
     truncate: "",
     wordWrap: false,
@@ -116,12 +95,12 @@ export function printMessageLinesBorderBox(
 
   let finalLines: string[] = [];
   for (const rawLine of lines) {
-    // Wrap the text while ignoring ANSI codes.
+    // Wrap the text while ignoring ANSI codes
     const wrapped = wrapText(rawLine, innerWidth);
     finalLines.push(...wrapped);
   }
 
-  // For each line, center it (ignoring ANSI codes) and apply the specified colors.
+  // For each line, center it (ignoring ANSI codes) and apply the specified colors
   finalLines.forEach((rawLine) => {
     const visibleLen = stripAnsiCodes(rawLine).length;
     const padLength = Math.max(0, innerWidth - visibleLen);
@@ -134,6 +113,7 @@ export function printMessageLinesBorderBox(
     table.push([colored]);
   });
 
+  // Conditionally print extra border lines
   if (withBorder) {
     console.log(" ".repeat(width));
   }
@@ -145,9 +125,6 @@ export function printMessageLinesBorderBox(
 
 /**
  * Prints a session end report as a two-column table.
- *
- * @param title - The title of the report.
- * @param report - An object containing metrics to display.
  */
 export function printSessionEndReport(
   title: string,
@@ -172,15 +149,14 @@ export function printSessionEndReport(
 }
 
 /**
- * Prints a swap summary using helper functions and a table, then returns fee details.
- *
- * @param parsedTx - Parsed Solana transaction object.
- * @param swapDetails - Details of the swap (from, to, amount).
- * @param tokenAMint - Input token mint address (optional).
- * @param tokenBMint - Output token mint address (optional).
- * @param walletAddress - Wallet address (optional).
- * @param rpcEndpoint - Solana RPC endpoint URL (defaults to mainnet-beta).
- * @returns A promise that resolves to an object containing feeSOL and referralFee.
+ * Prints a swap summary using helper functions and printTable, returning fee details.
+ * @param parsedTx Parsed Solana transaction object.
+ * @param swapDetails Details of the swap (from, to, amount).
+ * @param tokenAMint Input token mint address (optional).
+ * @param tokenBMint Output token mint address (optional).
+ * @param walletAddress Wallet address (optional).
+ * @param rpcEndpoint Solana RPC endpoint URL (defaults to mainnet-beta).
+ * @returns Promise resolving to { feeSOL, referralFee }.
  */
 export async function printSwapSummary(
   parsedTx: any,
@@ -190,6 +166,7 @@ export async function printSwapSummary(
   walletAddress?: string,
   rpcEndpoint: string = "https://api.mainnet-beta.solana.com"
 ): Promise<{ feeSOL: number; referralFee: number }> {
+  // Validate transaction data
   if (!parsedTx || !parsedTx.meta || typeof parsedTx.meta.fee !== "number") {
     printMessageLinesBorderBox(["Invalid or missing transaction data."], {
       borderColor: "red",
@@ -200,14 +177,17 @@ export async function printSwapSummary(
     return { feeSOL: 0, referralFee: 0 };
   }
 
+  // Calculate transaction fee
   const feeSOL = parsedTx.meta.fee / 1e9;
 
+  // Calculate net changes with error handling
   const inputNetChange =
     getNetTokenChange(parsedTx, swapDetails.from, tokenAMint, walletAddress) ||
     0;
   const outputNetChange =
     getNetTokenChange(parsedTx, swapDetails.to, tokenBMint, walletAddress) || 0;
 
+  // Fetch decimals with fallback
   const isSolInput = swapDetails.from.toUpperCase() === "SOL";
   const isSolOutput = swapDetails.to.toUpperCase() === "SOL";
   const inputDecimals = isSolInput
@@ -221,6 +201,7 @@ export async function printSwapSummary(
     ? await getSplTokenDecimals(tokenBMint, rpcEndpoint)
     : 6;
 
+  // Parse referral fee
   const { fee: referralFee, label: referralFeeLabel } =
     await parseReferralFeeFromTx(
       parsedTx,
@@ -233,24 +214,20 @@ export async function printSwapSummary(
       rpcEndpoint
     );
 
+  // Calculate referral fee percentage
   const inputAmountNum = parseFloat(swapDetails.amount) || 0;
   const referralFeePct =
     referralFeeLabel.includes(swapDetails.from) && inputAmountNum > 0
       ? (referralFee / inputAmountNum) * 100
       : NaN;
 
+  // Prepare table data
   const tableData: [string, string][] = [
     ["Input Token", swapDetails.from],
     ["Input Amount", `${swapDetails.amount} ${swapDetails.from}`],
-    [
-      "Net Change in Input",
-      `${inputNetChange.toFixed(6)} ${swapDetails.from}`,
-    ],
+    ["Net Change in Input", `${inputNetChange.toFixed(6)} ${swapDetails.from}`],
     ["Output Token", swapDetails.to],
-    [
-      "Net Change in Output",
-      `${outputNetChange.toFixed(6)} ${swapDetails.to}`,
-    ],
+    ["Net Change in Output", `${outputNetChange.toFixed(6)} ${swapDetails.to}`],
     ["Transaction Fee (SOL)", feeSOL.toFixed(6)],
     [referralFeeLabel, referralFee.toFixed(6)],
     [
@@ -259,6 +236,7 @@ export async function printSwapSummary(
     ],
   ];
 
+  // Print header and table
   printMessageLinesBorderBox(["🤝 Swap Summary"], swappingStyle);
   printTable(tableData, swappingTableOptions);
 
@@ -267,10 +245,6 @@ export async function printSwapSummary(
 
 /**
  * Builds an OSC 8 hyperlink for terminals that support it.
- *
- * @param url - The URL for the hyperlink.
- * @param linkText - The text to display as the link.
- * @returns The formatted OSC 8 hyperlink string.
  */
 export function buildOsc8Hyperlink(url: string, linkText: string): string {
   const OSC = "\u001B]8;;"; // Start of OSC 8
@@ -280,10 +254,7 @@ export function buildOsc8Hyperlink(url: string, linkText: string): string {
 }
 
 /**
- * Strips ANSI/OSC 8 escape sequences so only visible characters remain.
- *
- * @param str - The string from which to strip ANSI codes.
- * @returns The string with ANSI codes removed.
+ * Strips ANSI/OSC 8 escape sequences so we can measure only visible characters.
  */
 function stripAnsiCodes(str: string): string {
   return str.replace(
@@ -293,11 +264,7 @@ function stripAnsiCodes(str: string): string {
 }
 
 /**
- * Wraps text (which may include ANSI codes) into multiple lines up to a specified width.
- *
- * @param text - The text to wrap.
- * @param width - The maximum width for each line.
- * @returns An array of wrapped lines.
+ * Wraps text (which may contain ANSI codes) into multiple lines up to the specified width.
  */
 export function wrapText(text: string, width: number): string[] {
   const words = text.split(/\s+/);
@@ -330,13 +297,7 @@ export function wrapText(text: string, width: number): string[] {
 }
 
 /**
- * Shortens a string by preserving the first and last few characters and replacing the middle with ellipsis.
- *
- * @param str - The string to shorten.
- * @param maxLen - The maximum allowed length of the string (default 12).
- * @param prefixLen - The number of characters to preserve at the start (default 4).
- * @param suffixLen - The number of characters to preserve at the end (default 4).
- * @returns The shortened string.
+ * Shortens a string by preserving the first and last few characters, replacing the middle with ellipsis.
  */
 export function shortenString(
   str: string,
@@ -349,10 +310,7 @@ export function shortenString(
 }
 
 /**
- * Capitalizes the first letter of the provided string.
- *
- * @param str - The string to capitalize.
- * @returns The capitalized string.
+ * Capitalizes the first letter of a string.
  */
 function capitalize(str: string): string {
   if (!str) return str;
@@ -360,11 +318,7 @@ function capitalize(str: string): string {
 }
 
 /**
- * Centers text within a specified width.
- *
- * @param text - The text to center.
- * @param width - The width of the space in which to center the text.
- * @returns The centered text.
+ * Centers text within the specified width.
  */
 export function centerText(text: string, width: number): string {
   const padSize = Math.max(0, Math.floor((width - text.length) / 2));
@@ -372,11 +326,7 @@ export function centerText(text: string, width: number): string {
 }
 
 /**
- * Fully centers text within a specified width by adding padding to both sides.
- *
- * @param text - The text to fully center.
- * @param width - The total width for centering.
- * @returns The fully centered text.
+ * Centers text fully within the specified width.
  */
 export function centerTextFull(text: string, width: number): string {
   if (text.length >= width) return text.slice(0, width);
@@ -387,11 +337,7 @@ export function centerTextFull(text: string, width: number): string {
 }
 
 /**
- * Returns a centered line enclosed in vertical bars for use in a box.
- *
- * @param text - The text to center within the line.
- * @param totalWidth - The total width of the line including the borders.
- * @returns The formatted centered line.
+ * Returns a centered line for a box.
  */
 export function boxLineCentered(text: string, totalWidth: number): string {
   const innerWidth = totalWidth - 2;

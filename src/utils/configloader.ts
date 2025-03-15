@@ -1,10 +1,3 @@
-/**
- * @file configLoader.ts
- * @description Provides functions to load configuration files for the application.
- * It defines individual loaders for each configuration type (AppConfig, MiningConfig, SolanaConfig, SwapConfig)
- * and a full loader that aggregates them into a single FullConfig object.
- */
-
 import * as fs from "fs";
 import {
   FullConfig,
@@ -14,15 +7,7 @@ import {
   SwapConfig,
 } from "../types/config";
 
-/**
- * loadFile
- * A generic helper function that loads a JSON file from the given path.
- * If reading or parsing fails, it returns the provided default value.
- *
- * @param path - Path to the JSON file.
- * @param defaultValue - Default value to return if file loading fails.
- * @returns The parsed JSON data or the default value.
- */
+// A helper to load a file or return a default value if it fails
 function loadFile<T>(path: string, defaultValue: T): T {
   try {
     const data = fs.readFileSync(path, "utf8");
@@ -39,12 +24,6 @@ function loadFile<T>(path: string, defaultValue: T): T {
 // 1) Individual loaders for each config type
 // ───────────────────────────────────────────
 
-/**
- * loadAppConfig
- * Loads the application-level configuration from "./config/appconfig.json".
- *
- * @returns An AppConfig object.
- */
 export function loadAppConfig(): AppConfig {
   return loadFile<AppConfig>("./config/appconfig.json", {
     wizardMode: false,
@@ -60,12 +39,6 @@ export function loadAppConfig(): AppConfig {
   });
 }
 
-/**
- * loadMiningConfig
- * Loads mining configuration from "./config/miningconfig.json".
- *
- * @returns A MiningConfig object.
- */
 export function loadMiningConfig(): MiningConfig {
   return loadFile<MiningConfig>("./config/miningconfig.json", {
     cycleDelayMs: 600000,
@@ -80,6 +53,7 @@ export function loadMiningConfig(): MiningConfig {
     miningCompleteHashRate: 0,
     miningCompleteUnclaimedThreshold: 100,
     claimMaxThreshold: 500,
+    claimBoostThreshold: 30,
     mineButtonTrigger: "MINE",
     confirmButtonText: "Confirm",
     stopClaimButtonText: "STOP & CLAIM",
@@ -92,12 +66,6 @@ export function loadMiningConfig(): MiningConfig {
   });
 }
 
-/**
- * loadSolanaConfig
- * Loads Solana blockchain configuration from "./config/solanaconfig.json".
- *
- * @returns A SolanaConfig object.
- */
 export function loadSolanaConfig(): SolanaConfig {
   return loadFile<SolanaConfig>("./config/solanaconfig.json", {
     rpcEndpoint: "https://api.mainnet-beta.solana.com",
@@ -108,12 +76,6 @@ export function loadSolanaConfig(): SolanaConfig {
   });
 }
 
-/**
- * loadSwapConfig
- * Loads token swap configuration from "./config/swapconfig.json".
- *
- * @returns A SwapConfig object.
- */
 export function loadSwapConfig(): SwapConfig {
   return loadFile<SwapConfig>("./config/swapconfig.json", {
     tokenA: "SOL",
@@ -126,6 +88,7 @@ export function loadSwapConfig(): SwapConfig {
     tokenBPossibleAmounts: [1.1, 1.2, 1.15],
     tokenARewardAmounts: [0.052, 0.054, 0.053],
     tokenBRewardAmounts: [10, 11, 11.5],
+    maxReferralFee: "0.000005",
     swapRounds: 30,
     swapRewardsActive: false,
     enableRewardsCheck: false,
@@ -135,15 +98,9 @@ export function loadSwapConfig(): SwapConfig {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// 2) Full configuration loader: Aggregates all individual configs into one FullConfig object.
+// 2) A "full" loader that loads all four into one `FullConfig` object
 // ──────────────────────────────────────────────────────────────────
 
-/**
- * loadFullConfig
- * Loads and aggregates AppConfig, MiningConfig, SolanaConfig, and SwapConfig into a single FullConfig object.
- *
- * @returns A FullConfig object containing all configuration sections.
- */
 export function loadFullConfig(): FullConfig {
   return {
     app: loadAppConfig(),

@@ -1,9 +1,4 @@
 "use strict";
-/**
- * @file printTable.ts
- * @description Provides an overloaded `printTable` function that renders data in a table format
- * using cli-table3. It supports multiple invocation patterns and allows for custom styling via options.
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.printTable = printTable;
 const tslib_1 = require("tslib");
@@ -11,19 +6,13 @@ const cli_table3_1 = tslib_1.__importDefault(require("cli-table3"));
 const chalk_1 = tslib_1.__importDefault(require("chalk"));
 const print_1 = require("../print");
 const tableStyles_1 = require("../styles/tableStyles");
-/**
- * Main overloaded printTable implementation. This function supports multiple signatures:
- * 1. printTable(title: string, config: any)
- * 2. printTable(options: PrintTableOptions)
- * 3. printTable(data: any[], options?: Omit<PrintTableOptions, "data">)
- *
- * @param args - Arguments based on the overload signature.
- */
+// Implementation of printTable overloads.
 function printTable(...args) {
     if (typeof args[0] === "string") {
         // Called as printTable(title: string, config: any)
         const title = args[0];
         const config = args[1] || {};
+        // Convert the config object into an array of key-value pair objects.
         const data = Object.keys(config).map((key) => {
             const value = typeof config[key] === "object"
                 ? (0, print_1.formatObject)(config[key])
@@ -33,8 +22,8 @@ function printTable(...args) {
                 Value: chalk_1.default.green(value),
             };
         });
-        // Merge the dedicated configuration table options with the dynamic values.
-        const optionsObj = Object.assign(Object.assign({}, tableStyles_1.configTableOptions), { // defaults from your configTableOptions object
+        // Merge the default table options with dynamic values.
+        const optionsObj = Object.assign(Object.assign({}, tableStyles_1.configTableOptions), { // Defaults from your configTableOptions object.
             data, header: tableStyles_1.configTableOptions.header && tableStyles_1.configTableOptions.header.length > 0
                 ? tableStyles_1.configTableOptions.header
                 : ["Key", "Value"], colWidths: tableStyles_1.configTableOptions.colWidths && tableStyles_1.configTableOptions.colWidths.length > 0
@@ -46,7 +35,7 @@ function printTable(...args) {
         // Called as printTable(data: any[], options?: Omit<PrintTableOptions, "data">)
         const data = args[0];
         const opts = args[1] ? Object.assign(Object.assign({}, args[1]), { data }) : { data };
-        // Merge defaults if not provided.
+        // Merge default options if not explicitly provided.
         if (!opts.header && tableStyles_1.configTableOptions.header) {
             opts.header = tableStyles_1.configTableOptions.header;
         }
@@ -70,16 +59,20 @@ function printTable(...args) {
     }
 }
 /**
- * Internal implementation of printTable that creates a cli-table3 instance and renders the table.
+ * printTableImpl
+ * --------------
+ * Implements the table printing functionality using cli-table3.
+ * It builds the table headers, sets up the table options, and outputs the table to the console.
  *
- * @param options - The configuration options for the table.
+ * @param {PrintTableOptions} options - The options for configuring the table display.
+ * @returns {void}
  */
 function printTableImpl({ data, header, colWidths, title, headColor, borderColor, extraOptions, }) {
     if (!data || data.length === 0) {
         console.log("No data to display.");
         return;
     }
-    // Determine headers if not explicitly provided.
+    // Determine headers: use provided header, or compute from the first row if available.
     let computedHeader = [];
     if (header && header.length > 0) {
         computedHeader = header;
@@ -87,14 +80,14 @@ function printTableImpl({ data, header, colWidths, title, headColor, borderColor
     else if (typeof data[0] === "object" && !Array.isArray(data[0])) {
         computedHeader = Object.keys(data[0]);
     }
-    // Build the table style object.
+    // Define table style with header and border colors.
     const tableStyle = {
         head: headColor || ["cyan"],
         border: borderColor || ["grey"],
     };
-    // Build the full options object for cli-table3, spreading any additional options provided.
+    // Construct the full options object for cli-table3.
     const tableOptions = Object.assign({ head: computedHeader.length ? computedHeader : undefined, colWidths: colWidths, style: tableStyle }, extraOptions);
-    // Create the cli-table3 instance.
+    // Create an instance of cli-table3 with the constructed options.
     const table = new cli_table3_1.default(tableOptions);
     // Add rows to the table.
     data.forEach((row) => {
@@ -102,7 +95,13 @@ function printTableImpl({ data, header, colWidths, title, headColor, borderColor
             table.push(row);
         }
         else if (typeof row === "object") {
-            const rowArray = computedHeader.map((key) => row[key]);
+            // Map each header key to its corresponding value.
+            const rowArray = computedHeader.map((key) => {
+                const cellValue = row[key];
+                return typeof cellValue === "object" && cellValue !== null
+                    ? (0, print_1.formatObject)(cellValue)
+                    : cellValue;
+            });
             table.push(rowArray);
         }
         else {
@@ -115,5 +114,6 @@ function printTableImpl({ data, header, colWidths, title, headColor, borderColor
         console.log(chalk_1.default.yellow(title));
         console.log(chalk_1.default.yellow("=".repeat(62)));
     }
+    // Output the table to the console.
     console.log(table.toString());
 }

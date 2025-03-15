@@ -1,9 +1,3 @@
-/**
- * @file wizard.ts
- * @description Contains the main wizard loop for the autopond process, including mode selection,
- * browser/wallet setup, cycle execution, and configuration viewing/modification prompts.
- */
-
 import inquirer from "inquirer";
 import chalk from "chalk";
 import { fork } from "child_process";
@@ -19,7 +13,14 @@ import { Page, Browser } from "puppeteer";
 import { launchBrowser } from "../launch";
 import { FullConfig } from "../types/config";
 import { accumulateSwapMetrics, overallMetrics } from "../metrics/metrics";
-import { miningStyle, swappingStyle, generalStyle, phantomStyle, warningStyle, magmaStyle } from "./styles/borderboxstyles";
+import {
+  miningStyle,
+  swappingStyle,
+  generalStyle,
+  phantomStyle,
+  warningStyle,
+  magmaStyle,
+} from "./styles/borderboxstyles";
 import { viewPondStatistics } from "../metrics/metrics";
 import { d } from "../utils/helpers";
 import { runSwap } from "./modes/runswap";
@@ -31,17 +32,9 @@ import {
 import { promptAccountImportMethod } from "../phantom";
 import { printTable } from "./tables/printtable";
 
-/**
- * Runs the main wizard loop for autopond. This function performs the following tasks:
- * - Prompts the user to select a mode of operation.
- * - Handles mode-specific actions (e.g., launching the Magma Engine Viewer).
- * - Sets up the wallet and browser, including wallet prompts and navigation.
- * - Executes cycles based on the selected mode and rounds.
- * - Displays session end reports and handles cleanup.
- *
- * @param {FullConfig} fullConfig - The full configuration object for autopond.
- * @returns {Promise<void>} A promise that resolves when the wizard execution completes.
- */
+// ----------------------------------------------------------------------
+// runWizard: the main wizard loop
+// ----------------------------------------------------------------------
 export async function runWizard(fullConfig: FullConfig): Promise<void> {
   const { app, mining, swap } = fullConfig;
 
@@ -257,8 +250,9 @@ export async function runWizard(fullConfig: FullConfig): Promise<void> {
       "Total Cycles": effectiveRounds > 0 ? effectiveRounds : "Infinite",
       activeMiningRetryDelayMs: mining.activeMiningRetryDelayMs,
       miningLoopFailRetryDelayMs: mining.miningLoopFailRetryDelayMs,
-      miningSuccessDelayMs: mining.miningSuccessDelayMs,
+      miningSuccessDelayMs: mining.miningSuccessDelayMs
     };
+   
 
     if (effectiveMode === "Mine" || effectiveMode === "Mine and Swap") {
       printTable("⛏️  Mining config", mining);
@@ -354,12 +348,6 @@ export async function runWizard(fullConfig: FullConfig): Promise<void> {
   } // end outer while
 }
 
-/**
- * Prompts the user to press a key to either view/modify configuration settings or continue.
- *
- * @param {any} configs - The configuration object to be viewed or modified.
- * @returns {Promise<boolean>} A promise that resolves to true if configurations were viewed/modified, false otherwise.
- */
 export async function promptContinueOrConfig(configs: any): Promise<boolean> {
   const width = 62;
   const line1 = centerText(
@@ -418,12 +406,6 @@ export async function promptContinueOrConfig(configs: any): Promise<boolean> {
   });
 }
 
-/**
- * Waits for the user to press any key before continuing.
- *
- * @param {string} [message=chalk.bold("Press any key to continue...")] - The message to display to the user.
- * @returns {Promise<void>} A promise that resolves when a key is pressed.
- */
 export async function waitForAnyKey(
   message: string = chalk.bold("Press any key to continue...")
 ): Promise<void> {

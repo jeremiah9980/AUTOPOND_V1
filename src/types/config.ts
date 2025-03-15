@@ -1,22 +1,15 @@
 /**
- * @file config.ts
- * @description Contains application configuration interfaces for the Pond0x platform.
- * These interfaces define settings for the interactive wizard, mining operations,
- * Solana blockchain connectivity, and token swap operations. The FullConfig interface
- * aggregates all configuration sections.
- */
-
-/**
  * AppConfig - Application-level settings.
+ * @interface AppConfig
  *
- * @property {boolean} wizardMode - Enables the interactive configuration wizard.
- * @property {"Mine" | "Swap" | "Mine and Swap"} defaultMode - Default operating mode.
+ * @property {boolean} wizardMode - Enables interactive configuration wizard.
+ * @property {"Mine" | "Swap" | "Mine and Swap"} defaultMode - Default operating mode ("Mine", "Swap", or "Mine and Swap").
  * @property {number} [defaultCycleCount] - (Optional) Default number of cycles; if not set, runs indefinitely.
  * @property {boolean} [loggingEnabled] - (Optional) Flag to enable or disable logging.
  * @property {number} [liveDecodedDisplayLimit] - (Optional) Maximum number of live decoded events to display (default: 20).
- * @property {boolean} manualaccountcreation - Flag for manual account creation.
- * @property {string[]} myRigAddresses - List of rig addresses owned by the user.
- * @property {string[]} watchRigAddresses - List of rig addresses to monitor.
+ * @property {boolean} manualaccountcreation - Flag to enable manual account creation.
+ * @property {string[]} myRigAddresses - Array of rig addresses for the user's rigs.
+ * @property {string[]} watchRigAddresses - Array of rig addresses to be watched.
  */
 export interface AppConfig {
   wizardMode: boolean;
@@ -31,6 +24,7 @@ export interface AppConfig {
 
 /**
  * MiningConfig - Configuration parameters for mining operations.
+ * @interface MiningConfig
  *
  * @property {number} cycleDelayMs - Delay between mining cycles.
  * @property {number} activeMiningRetryDelayMs - Delay before retrying an active mining check.
@@ -39,11 +33,12 @@ export interface AppConfig {
  * @property {number} initialDelayMs - Delay before starting mining.
  * @property {number} popupDelayMs - Delay before handling popups.
  * @property {number} maxIterations - Maximum iterations allowed per session.
- * @property {number} loopIterationDelayMs - Delay between iterations within a session.
- * @property {number} miningCompleteHashRate - Minimum hashrate for a session to be considered complete.
+ * @property {number} loopIterationDelayMs - Delay between iterations in the mining loop.
+ * @property {number} miningCompleteHashRate - Minimum hash rate for a session to be considered complete.
  * @property {number} miningCompleteUnclaimedThreshold - Threshold for unclaimed rewards to mark completion.
  * @property {number} claimMaxThreshold - Maximum threshold for claiming rewards.
- * @property {number} claimTimeThreshold - Time threshold for claiming rewards.
+ * @property {number} claimTimeThreshold - Time threshold for triggering a claim.
+ * @property {number} claimBoostThreshold - Boost threshold for triggering a claim.
  * @property {string} mineButtonTrigger - Text to trigger the mining button.
  * @property {string} confirmButtonText - Text used to confirm actions.
  * @property {string} stopClaimButtonText - Text used to stop a claim.
@@ -51,8 +46,8 @@ export interface AppConfig {
  * @property {string} wss - WebSocket URL for mining data.
  * @property {string} apiKey - API key for accessing mining data.
  * @property {number} requiredActiveMiners - Minimum number of active miners required.
- * @property {boolean} skipMiningOnFailure - Flag to skip mining on failure.
- * @property {boolean} skipMiningIfInactive - Flag to skip mining if inactive.
+ * @property {boolean} skipMiningOnFailure - Flag to skip mining if a failure occurs.
+ * @property {boolean} skipMiningIfInactive - Flag to skip mining if no active mining is detected.
  */
 export interface MiningConfig {
   cycleDelayMs: number;
@@ -67,6 +62,7 @@ export interface MiningConfig {
   miningCompleteUnclaimedThreshold: number;
   claimMaxThreshold: number;
   claimTimeThreshold: number;
+  claimBoostThreshold: number;
   mineButtonTrigger: string;
   confirmButtonText: string;
   stopClaimButtonText: string;
@@ -80,6 +76,7 @@ export interface MiningConfig {
 
 /**
  * SolanaConfig - Settings for connecting to the Solana blockchain.
+ * @interface SolanaConfig
  *
  * @property {string} rpcEndpoint - The RPC endpoint URL.
  * @property {number} wpondTransferTimeThreshold - Time threshold (in seconds) for WPOND transfers.
@@ -97,34 +94,37 @@ export interface SolanaConfig {
 
 /**
  * SwapConfig - Parameters for token swap operations.
+ * @interface SwapConfig
  *
- * @property {string} tokenA - Symbol for the first token (e.g., "SOL").
- * @property {string} tokenB - Symbol for the second token (e.g., "USDT").
- * @property {string} [tokenAMint] - Mint address for tokenA (for SPL tokens; leave empty if SOL).
- * @property {string} [tokenBMint] - Mint address for tokenB (for SPL tokens; leave empty if SOL).
- * @property {number} tokenALowThreshold - Minimum balance threshold for tokenA.
- * @property {number} tokenBLowThreshold - Minimum balance threshold for tokenB.
- * @property {number[]} tokenAPossibleAmounts - Array of possible swap amounts for tokenA.
- * @property {number[]} tokenBPossibleAmounts - Array of possible swap amounts for tokenB.
- * @property {number[]} tokenARewardAmounts - Array of reward amounts for swaps involving tokenA.
- * @property {number[]} tokenBRewardAmounts - Array of reward amounts for swaps involving tokenB.
+ * @property {string} tokenA - Symbol for token A (e.g., "SOL").
+ * @property {string} tokenB - Symbol for token B (e.g., "USDT").
+ * @property {string} [tokenAMint] - Mint address for token A (for SPL tokens; leave empty if SOL).
+ * @property {string} [tokenBMint] - Mint address for token B (for SPL tokens; leave empty if SOL).
+ * @property {number} tokenALowThreshold - Minimum balance threshold for token A.
+ * @property {number} tokenBLowThreshold - Minimum balance threshold for token B.
+ * @property {number[]} tokenAPossibleAmounts - Array of possible swap amounts for token A.
+ * @property {number[]} tokenBPossibleAmounts - Array of possible swap amounts for token B.
+ * @property {number[]} tokenARewardAmounts - Array of reward amounts for token A swaps.
+ * @property {number[]} tokenBRewardAmounts - Array of reward amounts for token B swaps.
+ * @property {string} maxReferralFee - Maximum referral fee.
  * @property {number} swapRounds - Number of swap rounds to execute.
  * @property {boolean} swapRewardsActive - Flag indicating if reward amounts are active.
- * @property {boolean} enableRewardsCheck - Flag to enable checking for rewards.
- * @property {boolean} skipSwapIfNoRewards - Flag to skip swap rounds if no rewards are active.
- * @property {boolean} turboswap - If true, enables turboswap mode.
+ * @property {boolean} enableRewardsCheck - Flag to enable rewards check.
+ * @property {boolean} skipSwapIfNoRewards - Flag to skip swap if no rewards are available.
+ * @property {boolean} turboswap - Flag to enable TurboSwap mode.
  */
 export interface SwapConfig {
-  tokenA: string;
-  tokenB: string;
-  tokenAMint?: string;
-  tokenBMint?: string;
+  tokenA: string; // e.g., "SOL"
+  tokenB: string; // e.g., "USDT"
+  tokenAMint?: string; // For SPL tokens; leave empty if SOL
+  tokenBMint?: string; // For SPL tokens; leave empty if SOL
   tokenALowThreshold: number;
   tokenBLowThreshold: number;
   tokenAPossibleAmounts: number[];
   tokenBPossibleAmounts: number[];
   tokenARewardAmounts: number[];
   tokenBRewardAmounts: number[];
+  maxReferralFee: string;
   swapRounds: number;
   swapRewardsActive: boolean;
   enableRewardsCheck: boolean;
@@ -134,11 +134,12 @@ export interface SwapConfig {
 
 /**
  * FullConfig - Aggregated configuration for the application.
+ * @interface FullConfig
  *
  * @property {AppConfig} app - Application-level settings.
- * @property {MiningConfig} mining - Mining operation configurations.
- * @property {SolanaConfig} solana - Solana blockchain connection settings.
- * @property {SwapConfig} swap - Token swap operation parameters.
+ * @property {MiningConfig} mining - Configuration parameters for mining operations.
+ * @property {SolanaConfig} solana - Settings for connecting to the Solana blockchain.
+ * @property {SwapConfig} swap - Parameters for token swap operations.
  */
 export interface FullConfig {
   app: AppConfig;

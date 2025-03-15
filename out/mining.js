@@ -10,9 +10,13 @@ const mineMetricsDb_1 = require("./db/mineMetricsDb");
 const phantom_1 = require("./phantom");
 const miningConfig = (0, configloader_1.loadMiningConfig)();
 /**
- * updatelcd:
- * Reads elements with the class "lcdbox" on the page,
- * parses their inner text, and returns an LCD object.
+ * updatelcd
+ * ---------
+ * Reads elements with the class "lcdbox" from the current page, parses their inner text,
+ * and returns an LCD object representing the current display values.
+ *
+ * @param {Page} page - The Puppeteer Page instance to evaluate.
+ * @returns {Promise<LCD>} A promise that resolves to an LCD object containing parsed values.
  */
 const updatelcd = async (page) => {
     const lcd = await page.evaluate(() => {
@@ -24,6 +28,7 @@ const updatelcd = async (page) => {
             HASHRATE: null,
             BOOST: null,
         };
+        // Parse each element with the class "lcdbox" and map its innerText into key/value pairs.
         Array.from(document.querySelectorAll(".lcdbox")).forEach((v) => {
             const kv = v.innerText.replace(/\n/g, "").split(":");
             if (kv.length > 1 && kv[0] in LCD) {
@@ -35,37 +40,47 @@ const updatelcd = async (page) => {
     return lcd;
 };
 /**
- * MiningSession:
+ * MiningSession
+ * -------------
  * Encapsulates the mining session functionality including:
  * - Initialization (delays, popups, and metric setup)
  * - Periodic LCD polling and metric updates
  * - Evaluation of claim conditions and performing stop/claim actions.
+ *
+ * @class MiningSession
  */
 class MiningSession {
     /**
      * Constructor for MiningSession.
-     * @param page - The Puppeteer page instance.
-     * @param browser - The Puppeteer browser instance.
+     *
+     * @param {Page} page - The Puppeteer page instance.
+     * @param {Browser} browser - The Puppeteer browser instance.
      */
     constructor(page, browser) {
         this.sessionStartTime = 0;
         this.previousUpdateTime = 0;
-        this.iterationCount = 0; // corresponds to variable "c" in the original code
+        this.iterationCount = 0; // Corresponds to variable "c" in the original code.
         this.prevReward = 0;
-        this.boostRegistered = 0; // stores the first positive boost after iteration 5
+        this.boostRegistered = 0; // Stores the first positive boost after iteration 5.
         this.page = page;
         this.browser = browser;
     }
     /**
-     * initSession:
-     * Initializes the mining session by waiting for an initial delay,
-     * triggering the mining popup, reading the initial LCD values,
-     * and setting up the initial metrics.
+     * initSession
+     * -----------
+     * Initializes the mining session by:
+     * - Waiting for an initial delay.
+     * - Triggering the mining popup.
+     * - Reading the initial LCD values.
+     * - Setting up the initial metrics.
+     *
+     * @private
+     * @returns {Promise<void>}
      */
     async initSession() {
         (0, print_1.printMessageLinesBorderBox)(["Starting mining loop..."], borderboxstyles_1.miningStyle);
         await (0, helpers_1.d)(miningConfig.initialDelayMs);
-        // Trigger the mining popup.
+        // Trigger the mining popup using Phantom's popup handler.
         await (0, phantom_1.handlephanpopup)(this.page, this.browser, miningConfig.confirmButtonText, miningConfig.mineButtonTrigger);
         await (0, helpers_1.d)(miningConfig.popupDelayMs);
         // Read initial LCD values and initialize metrics.
@@ -94,12 +109,15 @@ class MiningSession {
         this.prevReward = initialUnclaimed;
     }
     /**
-     * updateMetrics:
+     * updateMetrics
+     * -------------
      * Updates the in-memory metrics based on the latest LCD values.
-     * Calculates changes in unclaimed tokens, hash rate, mining time,
-     * and updates the maximum boost if applicable.
-     * Also registers the first positive boost after iteration 5.
-     * @param lcd - The current LCD values.
+     * Calculates changes in unclaimed tokens, updates the average hash rate,
+     * mining time, and maximum boost if applicable.
+     *
+     * @private
+     * @param {LCD} lcd - The current LCD values.
+     * @returns {void}
      */
     updateMetrics(lcd) {
         const tnum = parseInt(lcd.TIME) || 0;
@@ -108,6 +126,7 @@ class MiningSession {
         const statString = (0, helpers_1.parseString)(lcd.STATUS);
         const connectionString = (0, helpers_1.parseString)(lcd.CONNECTION);
         const bnum = lcd.BOOST ? parseFloat(lcd.BOOST) || 0 : 0;
+        // Display the current LCD values.
         (0, print_1.printMessageLinesBorderBox)([
             `CONNECTION = ${connectionString}`,
             `STATUS = ${statString}`,
@@ -116,8 +135,9 @@ class MiningSession {
             `HASHRATE = ${hnum}`,
             `BOOST = ${bnum}`,
         ], borderboxstyles_1.miningStyle);
+        // Update the unclaimed amount metric.
         this.metrics.unclaimedAmount = unum;
-        // Update unclaimed metrics.
+        // Update unclaimed increment if the unclaimed amount has increased.
         if (unum > this.prevReward) {
             const diff = unum - this.prevReward;
             this.metrics.unclaimedIncrement = diff;
@@ -132,30 +152,31 @@ class MiningSession {
             this.metrics.unclaimedIncrement = 0;
             this.iterationCount++;
         }
-        // Update average hash rate.
+        // Update average hash rate using a weighted average.
         const previousCount = this.metrics.incrementalExtraData.checkCount;
         const newCount = previousCount + 1;
         this.metrics.avgHashRate =
             (this.metrics.avgHashRate * previousCount + hnum) / newCount;
         this.metrics.incrementalExtraData.checkCount = newCount;
-        // Update mining time.
+        // Update mining time metrics.
         const now = Date.now();
         this.metrics.miningTimeMin = parseFloat(((now - this.sessionStartTime) / 60000).toFixed(2));
         this.metrics.miningTimeIncrement = parseFloat(((now - this.previousUpdateTime) / 60000).toFixed(2));
         this.previousUpdateTime = now;
-        // Update boost if a new maximum is detected.
+        // Update maximum boost if a new higher boost value is detected.
         if (bnum > this.metrics.maxBoost) {
             (0, print_1.printMessageLinesBorderBox)([`New max boost detected: ${bnum}`], borderboxstyles_1.miningStyle);
             this.metrics.maxBoost = bnum;
         }
-        // Register the first positive boost after iteration 5.
+        // Register the first positive boost after 5 iterations.
         if (this.iterationCount >= 5 && bnum > 0 && this.boostRegistered === 0) {
             this.boostRegistered = bnum;
             (0, print_1.printMessageLinesBorderBox)([`Registered boost value: ${bnum}`], borderboxstyles_1.miningStyle);
         }
+        // Record the current iteration count in the incremental metrics.
         this.metrics.incrementalExtraData.iterations = this.iterationCount;
         (0, mineMetricsDb_1.updateAggregatedMiningMetrics)(this.metrics);
-        // Reset incremental values.
+        // Reset incremental values after aggregation.
         this.metrics.unclaimedIncrement = 0;
         this.metrics.miningTimeIncrement = 0;
         for (const key in this.metrics.incrementalExtraData) {
@@ -165,13 +186,16 @@ class MiningSession {
         }
     }
     /**
-     * stopAndClaim:
+     * stopAndClaim
+     * ------------
      * Helper function to stop the mining session and claim tokens.
-     * Updates the metrics with the claimed token amount, logs an optional
-     * success message, and simulates the click on the stop/claim button.
-     * @param tokens - The amount of tokens to claim.
-     * @param successMessage - Optional message to log on successful claim.
-     * @returns Promise<boolean> - Resolves to true upon completion.
+     * Updates the metrics with the claimed token amount, logs a success message if provided,
+     * and simulates clicking the stop/claim button.
+     *
+     * @private
+     * @param {number} tokens - The amount of tokens to claim.
+     * @param {string} [successMessage] - Optional success message to log.
+     * @returns {Promise<boolean>} Resolves to true upon successful claim.
      */
     async stopAndClaim(tokens, successMessage) {
         this.metrics.claimedAmount = tokens;
@@ -183,15 +207,19 @@ class MiningSession {
             miningConfig.stopClaimButtonText,
             miningConfig.stopAnywayButtonText,
         ]);
+        // Wait for the mining success delay before concluding the claim.
         (0, helpers_1.d)(miningConfig.miningSuccessDelayMs);
         return true;
     }
     /**
-     * checkMaxIterations:
+     * checkMaxIterations
+     * ------------------
      * Checks if the maximum number of iterations has been reached.
      * If so, attempts to claim tokens if the unclaimed amount exceeds the minimum threshold,
      * logs appropriate messages, and returns true to indicate the session should end.
-     * @returns Promise<boolean>
+     *
+     * @private
+     * @returns {Promise<boolean>} Resolves to true if max iterations are reached and session should end.
      */
     async checkMaxIterations() {
         if (this.iterationCount > miningConfig.maxIterations) {
@@ -220,11 +248,14 @@ class MiningSession {
         return false;
     }
     /**
-     * checkClaimMaxThreshold:
+     * checkClaimMaxThreshold
+     * -----------------------
      * Checks if the unclaimed token amount exceeds the maximum claim threshold.
-     * Logs final metrics using printMessageLinesBorderBox and attempts to claim tokens.
-     * @param unum - The current unclaimed token amount.
-     * @returns Promise<boolean>
+     * Logs final metrics and attempts to claim tokens if the condition is met.
+     *
+     * @private
+     * @param {number} unum - The current unclaimed token amount.
+     * @returns {Promise<boolean>} Resolves to true if claim threshold is met and tokens are claimed.
      */
     async checkClaimMaxThreshold(unum) {
         if (unum >= miningConfig.claimMaxThreshold) {
@@ -242,11 +273,14 @@ class MiningSession {
         return false;
     }
     /**
-     * checkZeroHashRateStart:
-     * Checks if the hash rate remains zero for several iterations.
-     * If true, stops the session.
-     * @param hnum - The current hash rate.
-     * @returns Promise<boolean>
+     * checkZeroHashRateStart
+     * ------------------------
+     * Checks if the hash rate remains zero after several iterations.
+     * If true, stops the mining session.
+     *
+     * @private
+     * @param {number} hnum - The current hash rate.
+     * @returns {Promise<boolean>} Resolves to true if the hash rate is zero beyond the allowed iterations.
      */
     async checkZeroHashRateStart(hnum) {
         if (this.iterationCount > 5 && hnum === 0) {
@@ -257,13 +291,16 @@ class MiningSession {
         return false;
     }
     /**
-     * checkTimeThreshold:
-     * Checks if the time threshold for claiming tokens has been reached.
-     * If the unclaimed tokens are below the minimum threshold, stops the session;
+     * checkTimeThreshold
+     * ------------------
+     * Checks if the elapsed time exceeds the claim time threshold.
+     * If the unclaimed amount is below the minimum threshold, stops the session;
      * otherwise, attempts to claim tokens.
-     * @param tnum - The current time value.
-     * @param unum - The current unclaimed token amount.
-     * @returns Promise<boolean>
+     *
+     * @private
+     * @param {number} tnum - The current time value.
+     * @param {number} unum - The current unclaimed token amount.
+     * @returns {Promise<boolean>} Resolves to true if the time threshold triggers a claim or session end.
      */
     async checkTimeThreshold(tnum, unum) {
         if (tnum >= miningConfig.claimTimeThreshold) {
@@ -280,12 +317,15 @@ class MiningSession {
         return false;
     }
     /**
-     * checkZeroHashRateEnd:
+     * checkZeroHashRateEnd
+     * ----------------------
      * Checks the primary claim condition based on hash rate and unclaimed token thresholds.
      * If met, attempts to claim tokens.
-     * @param hnum - The current hash rate.
-     * @param unum - The current unclaimed token amount.
-     * @returns Promise<boolean>
+     *
+     * @private
+     * @param {number} hnum - The current hash rate.
+     * @param {number} unum - The current unclaimed token amount.
+     * @returns {Promise<boolean>} Resolves to true if the claim condition is met.
      */
     async checkZeroHashRateEnd(hnum, unum) {
         if (hnum === miningConfig.miningCompleteHashRate &&
@@ -296,16 +336,18 @@ class MiningSession {
         return false;
     }
     /**
-     * checkBoost:
-     * Checks if a positive boost was previously registered (via maxBoost) and if,
-     * after at least 5 iterations, the current boost value drops below that registered value.
+     * checkBoost
+     * ----------
+     * Checks if a previously registered positive boost (maxBoost) exists and, after at least 5 iterations,
+     * whether the current boost drops below that registered maximum.
      * If so, triggers a claim action.
-     * @param lcd - The current LCD values.
-     * @returns Promise<boolean>
+     *
+     * @private
+     * @param {LCD} lcd - The current LCD values.
+     * @returns {Promise<boolean>} Resolves to true if the boost condition triggers a claim.
      */
     async checkBoost(lcd) {
         const bnum = lcd.BOOST ? parseFloat(lcd.BOOST) || 0 : 0;
-        // Only trigger boost claim if a positive boost was registered and we're past iteration 5.
         if (this.iterationCount >= 5 &&
             this.metrics.maxBoost > 0 &&
             bnum < this.metrics.maxBoost) {
@@ -319,11 +361,14 @@ class MiningSession {
         return false;
     }
     /**
-     * checkClaimConditions:
-     * Evaluates all claim conditions sequentially using helper methods.
+     * checkClaimConditions
+     * ----------------------
+     * Sequentially evaluates all claim conditions using helper methods.
      * Returns true if any condition is met and a claim or stop action is executed.
-     * @param lcd - The current LCD values.
-     * @returns Promise<boolean>
+     *
+     * @private
+     * @param {LCD} lcd - The current LCD values.
+     * @returns {Promise<boolean>} Resolves to true if a claim condition is satisfied.
      */
     async checkClaimConditions(lcd) {
         const tnum = parseInt(lcd.TIME) || 0;
@@ -344,11 +389,16 @@ class MiningSession {
         return false;
     }
     /**
-     * start:
-     * Starts the mining session by initializing the session, entering the loop to
-     * periodically poll LCD values, update metrics, and evaluate claim conditions.
-     * Finalizes metrics once a claim or stop condition is met.
-     * @returns Promise<boolean> - Resolves to true when the session completes.
+     * start
+     * -----
+     * Starts the mining session by:
+     * - Initializing the session.
+     * - Entering a loop to periodically poll LCD values.
+     * - Updating metrics and evaluating claim conditions.
+     * - Finalizing metrics once a claim or stop condition is met.
+     *
+     * @public
+     * @returns {Promise<boolean>} Resolves to true when the session completes.
      */
     async start() {
         await this.initSession();
@@ -362,14 +412,16 @@ class MiningSession {
                 // Read the latest LCD values.
                 const lcd = await updatelcd(this.page);
                 this.updateMetrics(lcd);
-                // Evaluate claim conditions.
+                // Evaluate all claim conditions.
                 mineComplete = await this.checkClaimConditions(lcd);
+                // Wait for the loop iteration delay if no claim/stop condition met.
                 if (!mineComplete) {
                     await (0, helpers_1.d)(miningConfig.loopIterationDelayMs);
                 }
             }
         }
         finally {
+            // Mark the final state in the incremental extra data and update overall metrics.
             if (!this.metrics.incrementalExtraData) {
                 this.metrics.incrementalExtraData = {};
             }

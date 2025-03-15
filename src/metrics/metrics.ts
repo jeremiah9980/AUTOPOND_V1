@@ -1,9 +1,4 @@
-/**
- * @file metrics.ts
- * @description Contains interfaces and functions for aggregating, accumulating, and displaying
- * both swap and mining metrics. It reads data from database tables, parses JSON fields, and prints
- * formatted tables using cli-table3 and our unified print functions.
- */
+// metrics.ts
 
 import { printMessageLinesBorderBox } from "../ui/print";
 import { readSwapMetrics } from "../db/swapMetricsDb";
@@ -24,6 +19,7 @@ import { metricTableOptions } from "../ui/styles/tableStyles";
 
 /**
  * SwapCycleMetrics
+ * ----------------
  * Metrics for a single swap cycle.
  */
 export interface SwapCycleMetrics {
@@ -53,6 +49,7 @@ export interface SwapCycleMetrics {
 
 /**
  * MiningCycleMetrics
+ * ------------------
  * Metrics for a single mining session.
  */
 export interface MiningCycleMetrics {
@@ -73,6 +70,7 @@ export interface MiningCycleMetrics {
 
 /**
  * OverallMetrics
+ * --------------
  * Combines both swap and mining metrics.
  */
 export interface OverallMetrics {
@@ -95,11 +93,7 @@ export let overallMetrics: OverallMetrics = {
     totalTransactionFeesSOL: 0,
     referralFeesByToken: {},
     preSignFailures: { insufficient: 0, userAbort: 0, other: 0 },
-    postSignFailures: {
-      slippageTolerance: 0,
-      transactionReverted: 0,
-      other: 0,
-    },
+    postSignFailures: { slippageTolerance: 0, transactionReverted: 0, other: 0 },
     extraSwapErrors: {},
   },
   miningMetrics: {
@@ -120,9 +114,11 @@ export let overallMetrics: OverallMetrics = {
 
 /**
  * accumulateSwapMetrics
+ * -----------------------
  * Merges the metrics from a single swap cycle into overall swapMetrics.
  *
- * @param current - The metrics from a single swap cycle.
+ * @param {SwapCycleMetrics} current - The swap metrics from the current cycle to be accumulated.
+ * @returns {void}
  */
 export function accumulateSwapMetrics(current: SwapCycleMetrics): void {
   const overall = overallMetrics.swapMetrics;
@@ -139,10 +135,7 @@ export function accumulateSwapMetrics(current: SwapCycleMetrics): void {
 
   // Accumulate dictionary-based fields.
   accumulateDictionary(overall.volumeByToken, current.volumeByToken);
-  accumulateDictionary(
-    overall.referralFeesByToken,
-    current.referralFeesByToken
-  );
+  accumulateDictionary(overall.referralFeesByToken, current.referralFeesByToken);
   accumulateDictionary(overall.extraSwapErrors, current.extraSwapErrors);
 
   // Accumulate preSignFailures and postSignFailures.
@@ -161,6 +154,8 @@ export function accumulateSwapMetrics(current: SwapCycleMetrics): void {
  * ------------------
  * Reads metrics from the swap_metrics and mining_metrics tables,
  * parses the JSON fields, and prints out the statistics in a formatted table display.
+ *
+ * @returns {Promise<void>} A promise that resolves when the metrics have been displayed.
  */
 export async function viewPondStatistics(): Promise<void> {
   // Read the swap metrics row from the database.
@@ -218,41 +213,17 @@ export async function viewPondStatistics(): Promise<void> {
   // Prepare swap metrics rows.
   const swapRows = [
     { Metric: "Total Swap Rounds", Value: swapMetrics.totalSwapRounds },
-    {
-      Metric: "Successful Swap Rounds",
-      Value: swapMetrics.successfulSwapRounds,
-    },
+    { Metric: "Successful Swap Rounds", Value: swapMetrics.successfulSwapRounds },
     { Metric: "Failed Swap Rounds", Value: swapMetrics.failedSwapRounds },
     { Metric: "Aborted Swap Rounds", Value: swapMetrics.abortedSwapRounds },
     { Metric: "Total Swap Attempts", Value: swapMetrics.totalSwapAttempts },
-    {
-      Metric: "Volume by Token",
-      Value: JSON.stringify(swapMetrics.volumeByToken, null, 2),
-    },
-    {
-      Metric: "Swaps by Token",
-      Value: JSON.stringify(swapMetrics.swapsByToken, null, 2),
-    },
-    {
-      Metric: "Total Transaction Fees (SOL)",
-      Value: swapMetrics.totalTransactionFeesSOL.toFixed(6),
-    },
-    {
-      Metric: "Referral Fees by Token",
-      Value: JSON.stringify(swapMetrics.referralFeesByToken, null, 2),
-    },
-    {
-      Metric: "Pre-Sign Failures",
-      Value: JSON.stringify(swapMetrics.preSignFailures, null, 2),
-    },
-    {
-      Metric: "Post-Sign Failures",
-      Value: JSON.stringify(swapMetrics.postSignFailures, null, 2),
-    },
-    {
-      Metric: "Extra Swap Errors",
-      Value: JSON.stringify(swapMetrics.extraSwapErrors, null, 2),
-    },
+    { Metric: "Volume by Token", Value: swapMetrics.volumeByToken },
+    { Metric: "Swaps by Token", Value: swapMetrics.swapsByToken },
+    { Metric: "Total Transaction Fees (SOL)", Value: swapMetrics.totalTransactionFeesSOL.toFixed(6) },
+    { Metric: "Referral Fees by Token", Value: swapMetrics.referralFeesByToken },
+    { Metric: "Pre-Sign Failures", Value: swapMetrics.preSignFailures },
+    { Metric: "Post-Sign Failures", Value: swapMetrics.postSignFailures },
+    { Metric: "Extra Swap Errors", Value: swapMetrics.extraSwapErrors },
   ];
 
   // Print the swap metrics table.
@@ -262,23 +233,14 @@ export async function viewPondStatistics(): Promise<void> {
   // Prepare mining metrics rows.
   const miningRows = [
     { Metric: "Total Mining Rounds", Value: miningMetrics.totalMiningRounds },
-    {
-      Metric: "Successful Mining Rounds",
-      Value: miningMetrics.successfulMiningRounds,
-    },
+    { Metric: "Successful Mining Rounds", Value: miningMetrics.successfulMiningRounds },
     { Metric: "Failed Mining Rounds", Value: miningMetrics.failedMiningRounds },
     { Metric: "Total Claimed Amount", Value: miningMetrics.claimedAmount },
     { Metric: "Total Unclaimed Amount", Value: miningMetrics.unclaimedAmount },
     { Metric: "Average Hash Rate", Value: miningMetrics.avgHashRate },
-    {
-      Metric: "Total Mining Time (min)",
-      Value: miningMetrics.totalMiningTimeMin.toFixed(2),
-    },
+    { Metric: "Total Mining Time (min)", Value: miningMetrics.totalMiningTimeMin.toFixed(2) },
     { Metric: "Boost", Value: miningMetrics.boost },
-    {
-      Metric: "Extra Mining Data",
-      Value: JSON.stringify(miningMetrics.extraMiningData, null, 2),
-    },
+    { Metric: "Extra Mining Data", Value: miningMetrics.extraMiningData },
   ];
 
   // Print the mining metrics table.

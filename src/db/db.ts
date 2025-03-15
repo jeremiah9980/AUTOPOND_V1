@@ -1,26 +1,32 @@
+// src/db/db.ts
 /**
- * @file db.ts
- * @description Initializes and provides a shared SQLite database connection using better-sqlite3.
- * It creates the necessary tables (swap_metrics and mining_metrics) and their default rows if they do not exist.
+ * @module db
+ * @description
+ * This module handles the database initialization and access for the application.
+ * It creates a singleton instance of a SQLite database using the better-sqlite3 package,
+ * and ensures that the necessary tables and indices exist for tracking both swap and mining metrics.
  */
 
 import Database from 'better-sqlite3';
 
+// A singleton instance of the SQLite database.
+// It remains undefined until the first call to getDatabase(), after which it will be reused.
 let dbInstance: Database.Database | undefined;
 
 /**
- * getDatabase
- * Returns the singleton database instance. If the instance does not exist, it is created,
- * and the required tables and indexes are initialized.
+ * Retrieves the singleton database instance.
  *
- * @returns The shared Database instance.
+ * If the database is not yet initialized, this function creates or opens the database file,
+ * sets up the required tables (swap_metrics and mining_metrics), and creates unique indices.
+ *
+ * @returns {Database.Database} A singleton instance of the SQLite database.
  */
 export function getDatabase(): Database.Database {
   if (!dbInstance) {
-    // Open the database file (appMetrics.db) located in ./src/db.
+    // Use a single file (appMetrics.db) for all metrics.
     dbInstance = new Database('./src/db/appMetrics.db', {});
 
-    // Create the swap_metrics table if it doesn't exist.
+    // Create the swap_metrics table if it doesn’t exist.
     dbInstance.exec(`
       CREATE TABLE IF NOT EXISTS swap_metrics (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -39,13 +45,16 @@ export function getDatabase(): Database.Database {
       );
     `);
 
-    // Ensure a default row exists for swap_metrics.
+    // Ensure the default row exists for swap_metrics (id = 1).
+    // The INSERT OR IGNORE statement prevents duplicate entries.
     dbInstance.prepare(`INSERT OR IGNORE INTO swap_metrics (id) VALUES (1)`).run();
+
+    // Create a unique index on the id column for swap_metrics.
     dbInstance.exec(`
       CREATE UNIQUE INDEX IF NOT EXISTS unique_swap_id ON swap_metrics (id);
     `);
 
-    // Create the mining_metrics table if it doesn't exist.
+    // Create the mining_metrics table if it doesn’t exist.
     dbInstance.exec(`
       CREATE TABLE IF NOT EXISTS mining_metrics (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -61,8 +70,10 @@ export function getDatabase(): Database.Database {
       );
     `);
 
-    // Ensure a default row exists for mining_metrics.
+    // Ensure the default row exists for mining_metrics (id = 1).
     dbInstance.prepare(`INSERT OR IGNORE INTO mining_metrics (id) VALUES (1)`).run();
+
+    // Create a unique index on the id column for mining_metrics.
     dbInstance.exec(`
       CREATE UNIQUE INDEX IF NOT EXISTS unique_mining_id ON mining_metrics (id);
     `);
@@ -71,12 +82,20 @@ export function getDatabase(): Database.Database {
 }
 
 /**
- * initDatabase
- * Ensures that the database is initialized by calling getDatabase.
+ * Initializes the database.
+ *
+ * This function ensures that the singleton database instance is created and all required
+ * tables and indices are set up. It can be called on application startup to prepare the database.
+ *
+ * @returns {void}
  */
 export function initDatabase(): void {
-  getDatabase();
+  getDatabase(); // Simply calling this function ensures the database is initialized.
 }
 
-// Export a shared database instance.
+/**
+ * A shared, pre-initialized database instance that can be imported and used across modules.
+ *
+ * @type {Database.Database}
+ */
 export const db = getDatabase();

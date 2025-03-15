@@ -1,10 +1,8 @@
 "use strict";
-/**
- * @file solana.ts
- * @description This module handles the swapping logic for the Pond0x platform and provides on‐chain helper functions.
- * It interacts with Solana using @solana/web3.js and uses Puppeteer for browser automation.
- * Console output is styled using chalk and tables are generated using cli-table3.
- */
+// solana.ts
+// This module handles the swapping logic for the Pond0x platform and provides on‐chain helper functions.
+// It interacts with Solana using @solana/web3.js and uses Puppeteer for browser automation.
+// Console output is styled using chalk and tables are generated using cli-table3.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPhantomPublicKey = getPhantomPublicKey;
 exports.getSolBalance = getSolBalance;
@@ -79,14 +77,6 @@ async function getSplBalance(pubKeyString, tokenMintString) {
     }
     return totalBalance;
 }
-/**
- * getSplTokenDecimals - Retrieves the number of decimals for a given SPL token mint.
- *
- * @param mintAddress - The SPL token mint address.
- * @param rpcEndpoint - The Solana RPC endpoint (default is mainnet-beta).
- * @param defaultDecimals - Default decimals to use if retrieval fails (default is 6).
- * @returns The number of decimals for the token.
- */
 async function getSplTokenDecimals(mintAddress, rpcEndpoint = "https://api.mainnet-beta.solana.com", defaultDecimals = 6) {
     const connection = new web3_js_1.Connection(rpcEndpoint, "confirmed");
     try {
@@ -103,15 +93,6 @@ async function getSplTokenDecimals(mintAddress, rpcEndpoint = "https://api.mainn
         return defaultDecimals;
     }
 }
-/**
- * getNetTokenChange - Calculates the net token change for a given token in a transaction.
- *
- * @param parsedTx - The parsed transaction object.
- * @param token - The token symbol (e.g., "SOL").
- * @param tokenMint - The token mint address (optional).
- * @param walletAddress - The wallet address to filter by (optional).
- * @returns The net change in token balance.
- */
 function getNetTokenChange(parsedTx, token, tokenMint, walletAddress) {
     if (token.toUpperCase() === "SOL" || !tokenMint) {
         const pre = parsedTx.meta.preBalances[0] / 1e9;
@@ -130,22 +111,6 @@ function getNetTokenChange(parsedTx, token, tokenMint, walletAddress) {
         return postSum - preSum;
     }
 }
-/**
- * parseReferralFeeFromTx - Parses the referral fee from a transaction.
- *
- * It looks for transfer instructions in the inner instructions, identifies the minimal valid transfer,
- * and calculates the fee based on the token decimals.
- *
- * @param parsedTx - The parsed transaction object.
- * @param tokenAMint - The mint address for the input token.
- * @param tokenBMint - The mint address for the output token.
- * @param inputSymbol - The symbol for the input token.
- * @param outputSymbol - The symbol for the output token.
- * @param inputDecimals - Decimals for the input token.
- * @param outputDecimals - Decimals for the output token.
- * @param rpcEndpoint - The Solana RPC endpoint (default is mainnet-beta).
- * @returns An object containing the referral fee and its label.
- */
 async function parseReferralFeeFromTx(parsedTx, tokenAMint, tokenBMint, inputSymbol, outputSymbol, inputDecimals, outputDecimals, rpcEndpoint = "https://api.mainnet-beta.solana.com") {
     var _a;
     const TOKEN_PROGRAM_ID = "TOKENKEGQFEZYINWAJBNBGKPFXCWUBVF9SS623VQ5DA";
@@ -224,10 +189,9 @@ async function getParsedTransactionWithRetry(connection, signature, retries = 5)
 /**
  * checkRecentWpondTransfer - Checks for a recent WPOND transfer (swap reward activity) from the rewards wallet.
  *
- * It uses the configured time threshold to filter recent transactions, prints a summary table of the activity,
- * and returns true if at least one transaction passed validation; otherwise, false.
+ * It uses the time threshold to filter transactions, then prints a summary table of the activity.
  *
- * @returns True if a valid WPOND transfer was detected; otherwise, false.
+ * @returns True if at least one transaction passed validation; otherwise, false.
  */
 async function checkRecentWpondTransfer() {
     const rewardsWalletAddress = solanaConfig.rewardsWalletAddress;
@@ -267,7 +231,8 @@ async function checkRecentWpondTransfer() {
                     let src = "";
                     let dest = "";
                     if (parsedTx && parsedTx.meta && parsedTx.transaction.message) {
-                        for (const instruction of parsedTx.transaction.message.instructions) {
+                        for (const instruction of parsedTx.transaction.message
+                            .instructions) {
                             if ("parsed" in instruction) {
                                 const parsedInstruction = instruction.parsed;
                                 if ((parsedInstruction.type === "transfer" ||

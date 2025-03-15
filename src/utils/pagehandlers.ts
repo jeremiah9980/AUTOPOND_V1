@@ -1,20 +1,14 @@
-/**
- * @file pageHandlers.ts
- * @description Provides utility functions for interacting with page elements
- * using Puppeteer. Functions include clicking elements based on text, retrieving bounding
- * box coordinates, selecting tokens, and setting swap amounts.
- */
-
+// pageHandlers.ts
 import { Page } from "puppeteer";
-import { d } from "./helpers"; // Delay function
+import { d } from "./helpers"; // If you need the delay function
 
 /**
- * clickSelectorWtxt
- * Finds an element by a CSS selector that contains specific text and clicks it.
+ * clickSelectorWtxt:
+ * Finds an element by a CSS selector that contains specific text, then clicks it.
  *
- * @param page - The Puppeteer Page instance.
- * @param selector - The CSS selector used to target elements.
- * @param text - The text that the element should contain.
+ * @param page - Puppeteer Page instance.
+ * @param selector - The CSS selector to target elements.
+ * @param text - The text to match within the element.
  */
 export const clickSelectorWtxt = async (
   page: Page,
@@ -23,9 +17,9 @@ export const clickSelectorWtxt = async (
 ): Promise<void> => {
   await page.evaluate(
     (sel, txt) => {
-      // Get all elements matching the selector.
-      const elements = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
-      // Find the element whose innerText includes the provided text.
+      const elements = Array.from(
+        document.querySelectorAll(sel)
+      ) as HTMLElement[];
       const element = elements.find((e) => e.innerText.includes(txt));
       if (element) element.click();
     },
@@ -35,24 +29,26 @@ export const clickSelectorWtxt = async (
 };
 
 /**
- * getBoundingBox
- * Finds an element matching a selector that contains the specified text and returns its center coordinates.
+ * getBoundingBox:
+ * Finds an element matching a selector that contains specified text and returns its center coordinates.
  *
- * @param page - The Puppeteer Page instance.
- * @param selector - The CSS selector to search for elements.
+ * @param page - Puppeteer Page instance.
+ * @param selector - The CSS selector to search.
  * @param searchText - The text to match within the element.
- * @returns An object containing the center coordinates { bboxX, bboxY } or null if not found.
+ * @returns The center coordinates { bboxX, bboxY } or null if not found.
  */
 export const getBoundingBox = async (
   page: Page,
   selector: string,
   searchText: string
 ): Promise<{ bboxX: number; bboxY: number } | null> => {
-  // Wait briefly to allow the element to render.
+  // Optionally, wait a moment before evaluating
   await new Promise((resolve) => setTimeout(resolve, 2000));
   const bbox = await page.evaluate(
     (sel, txt) => {
-      const elements = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
+      const elements = Array.from(
+        document.querySelectorAll(sel)
+      ) as HTMLElement[];
       const element = elements.find((e) => e.innerText.includes(txt));
       if (!element) return null;
       const rect = element.getBoundingClientRect();
@@ -68,38 +64,42 @@ export const getBoundingBox = async (
 };
 
 /**
- * outputTokenSelect
+ * coinSelect:
  * Opens the output token dropdown by clicking the designated button.
  * Assumes that the 6th button (index 5) triggers this dropdown.
  *
- * @param page - The Puppeteer Page instance.
+ * @param page - Puppeteer Page instance.
  */
 export const outputTokenSelect = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll("button")) as HTMLElement[];
+    const buttons = Array.from(
+      document.querySelectorAll("button")
+    ) as HTMLElement[];
     buttons[5]?.click();
   });
 };
 
 /**
- * inputTokenSelect
+ * inputTokenSelect:
  * Opens the input token dropdown by clicking the designated button.
  * Assumes that the 5th button (index 4) triggers this dropdown.
  *
- * @param page - The Puppeteer Page instance.
+ * @param page - Puppeteer Page instance.
  */
 export const inputTokenSelect = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll("button")) as HTMLElement[];
+    const buttons = Array.from(
+      document.querySelectorAll("button")
+    ) as HTMLElement[];
     buttons[4]?.click();
   });
 };
 
 /**
- * wadapt
+ * wadapt:
  * Clicks the Phantom wallet adapter button to trigger the connection modal.
  *
- * @param page - The Puppeteer Page instance.
+ * @param page - Puppeteer Page instance.
  */
 export const wadapt = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
@@ -111,12 +111,12 @@ export const wadapt = async (page: Page): Promise<void> => {
 };
 
 /**
- * setSwapAmount
+ * setSwapAmount:
  * Sets the swap amount in the "You Pay" input field.
  *
- * @param page - The Puppeteer Page instance.
+ * @param page - Puppeteer Page instance.
  * @param amount - The amount to set.
- * @returns A Promise that resolves to true if successful, or false otherwise.
+ * @returns A Promise that resolves to true if successful, false otherwise.
  */
 export const setSwapAmount = async (
   page: Page,
@@ -131,7 +131,6 @@ export const setSwapAmount = async (
       (sel, value) => {
         const input = document.querySelector(sel) as HTMLInputElement | null;
         if (input) {
-          // Use native setter if available to simulate user input.
           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
             window.HTMLInputElement.prototype,
             "value"
@@ -141,7 +140,6 @@ export const setSwapAmount = async (
           } else {
             input.value = value;
           }
-          // Dispatch input and change events.
           input.dispatchEvent(new Event("input", { bubbles: true }));
           input.dispatchEvent(new Event("change", { bubbles: true }));
         }
@@ -157,12 +155,12 @@ export const setSwapAmount = async (
 };
 
 /**
- * setMaxTx
- * Sets transaction settings (e.g., slippage) in the UI.
+ * setMaxTx:
+ * Sets transaction settings (slippage, etc.) in the UI.
  *
- * @param page - The Puppeteer Page instance.
+ * @param page - Puppeteer Page instance.
  */
-export const setMaxTx = async (page: Page): Promise<void> => {
+export const setMaxTx = async (page: Page, maxFee: string): Promise<void> => {
   await d(2000);
   const selector =
     "#jupiter-terminal > div.mt-2.h-7 > div > div > button:nth-child(3) > svg";
@@ -170,34 +168,36 @@ export const setMaxTx = async (page: Page): Promise<void> => {
   await page.click(selector);
   await d(2000);
 
-  // Retrieve the bounding box of the "SOL" element in the settings area.
-  const maybeMaxBbox = await getBoundingBox(page, '[class="relative mt-1"]', "SOL");
+  const maybeMaxBbox = await getBoundingBox(
+    page,
+    '[class="relative mt-1"]',
+    "SOL"
+  );
   if (!maybeMaxBbox)
-    throw new Error('Could not locate bounding box for "SOL" in the settings area.');
+    throw new Error(
+      'Could not locate bounding box for "SOL" in the settings area.'
+    );
   const { bboxX, bboxY } = maybeMaxBbox;
 
-  // Click on the element and adjust the input value.
   await page.mouse.click(bboxX, bboxY);
   await page.keyboard.press("Backspace");
   await page.keyboard.press("Backspace");
-  await page.keyboard.type("0.0000005");
+  await page.keyboard.type(maxFee);
   await d(1000);
   await clickSelectorWtxt(page, "button", "Save Settings");
 };
 
 /**
- * swapBtn
- * 1) Waits up to 5 seconds for the swap button (.swapbtn) to appear.
- * 2) Checks the button text in a loop (up to 20 tries, i.e. 20 seconds total).
- * 3) Clicks "Retry" or "Swap Again" if found, and re-checks.
- * 4) Throws immediately if the text is "Insufficient balance".
- * 5) Clicks once if the text is "Swap" and resolves.
- * 6) Throws an error if a valid "Swap" state is never encountered.
- *
- * @param page - The Puppeteer Page instance.
+ * swapBtn:
+ *  1) Waits up to 5 seconds for the .swapbtn to appear.
+ *  2) Checks the button text in a loop (maxTries = 20, i.e. 20 seconds total).
+ *  3) If text is "Retry" or "Swap Again", clicks and re-checks.
+ *  4) If text is "Insufficient balance", throws immediately.
+ *  5) If text is "Swap", clicks once and resolves.
+ *  6) If never becomes "Swap", throws an error.
  */
 export const swapBtn = async (page: Page): Promise<void> => {
-  // Wait for the swap button to appear.
+  // Step 1) Wait up to 5s for the button to appear
   try {
     await page.waitForSelector(".swapbtn", { timeout: 5000 });
   } catch (e) {
@@ -210,7 +210,9 @@ export const swapBtn = async (page: Page): Promise<void> => {
 
   while (!foundSwap && tries < maxTries) {
     const text = await page.evaluate(() => {
-      const button = document.querySelector(".swapbtn") as HTMLButtonElement | null;
+      const button = document.querySelector(
+        ".swapbtn"
+      ) as HTMLButtonElement | null;
       return button?.innerText.trim() || "";
     });
 
@@ -226,36 +228,42 @@ export const swapBtn = async (page: Page): Promise<void> => {
 
     tries++;
     if (!foundSwap) {
-      await d(1000); // wait 1 second before retrying
+      await d(1000); // wait 1s, try again
     }
   }
 
   if (!foundSwap) {
-    throw new Error("Never encountered a valid 'Swap' state within 20 seconds.");
+    throw new Error(
+      "Never encountered a valid 'Swap' state within 20 seconds."
+    );
   }
 };
 
 /**
- * clickbyinnertxt
- * Finds an element by the specified selector with an innerText exactly matching one of the provided values,
+ * clickbyinnertxt:
+ * Finds an element by the specified selector with an innerText exactly matching the provided text,
  * clicks the element, and returns true if successful.
  *
- * @param page - The Puppeteer Page instance.
+ * @param page - The Puppeteer Page object.
  * @param selector - The CSS selector to locate elements.
- * @param innertxt - A string or array of strings that must exactly match the innerText.
- * @returns A Promise that resolves to true if an element was found and clicked, otherwise false.
+ * @param innertxt - The exact innerText to match (or array of possible matches).
+ * @returns A Promise that resolves to true if the element is found and clicked.
  */
 export const clickbyinnertxt = async (
   page: Page,
   selector: string,
   innertxt: string | string[]
 ): Promise<boolean> => {
+  // Ensure candidates is an array.
   const candidates = Array.isArray(innertxt) ? innertxt : [innertxt];
   const didClick = await page.evaluate(
     (sel, texts) => {
       const elements = Array.from(document.querySelectorAll(sel));
+      // Cast each element to HTMLElement so we can access innerText.
       const target = elements.find((ele) =>
-        texts.some((txt: string) => (ele as HTMLElement).innerText.trim() === txt)
+        texts.some(
+          (txt: string) => (ele as HTMLElement).innerText.trim() === txt
+        )
       );
       if (!target) return false;
       (target as HTMLElement).click();
@@ -268,24 +276,19 @@ export const clickbyinnertxt = async (
 };
 
 /**
- * waitforelement
- * Waits for an element matching the given selector and containing specific innerText to appear,
- * then clicks it.
- *
- * @param page - The Puppeteer Page instance.
- * @param selector - The CSS selector to locate elements.
- * @param innertxt - The text to search for within the element.
- * @param timeout - Maximum time to wait for the element (in ms).
+ * waitforelement - Waits for a matching element + innerText, then clicks it.
  */
 export const waitforelement = async (
   page: Page,
   selector: string,
   innertxt: string,
   timeout: number
-): Promise<void> => {
+) => {
   await page.waitForFunction(
     (sel, txt) => {
-      const elements = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
+      const elements = Array.from(
+        document.querySelectorAll(sel)
+      ) as HTMLElement[];
       for (const el of elements) {
         if (el.innerText.includes(txt)) {
           el.click();

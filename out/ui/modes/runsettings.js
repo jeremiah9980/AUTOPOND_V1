@@ -1,8 +1,4 @@
 "use strict";
-/**
- * @file configDisplay.ts
- * @description Provides functions for displaying and modifying configuration settings.
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.showConfigurationSettings = showConfigurationSettings;
 exports.modifyConfigurations = modifyConfigurations;
@@ -12,29 +8,39 @@ const print_1 = require("../print");
 const borderboxstyles_1 = require("../styles/borderboxstyles");
 const printtable_1 = require("../tables/printtable");
 /**
- * Displays the current configuration settings using formatted tables.
+ * showConfigurationSettings
+ * -------------------------
+ * Displays the overall configuration settings by printing each configuration section
+ * (App, Mining, Solana, and Swap) using formatted tables.
  *
- * @param configs - The configuration object containing various settings.
+ * @param {any} configs - The configuration object containing various configuration sections.
+ *                        Expected to have keys: app, mining, solana, and swap.
+ * @returns {void}
  */
 function showConfigurationSettings(configs) {
-    // Display overall header.
+    // Overall header for configuration settings.
     (0, print_1.printMessageLinesBorderBox)(["🧠  Configuration Settings"], borderboxstyles_1.generalStyle);
-    // Display each config section using the printTable function.
+    // Print each configuration section using the overloaded printTable function.
     (0, printtable_1.printTable)("⚙️  App config", configs.app || {});
     (0, printtable_1.printTable)("⛏️  Mining config", configs.mining || {});
     (0, printtable_1.printTable)("☀️  Solana config", configs.solana || {});
     (0, printtable_1.printTable)("🤝  Swap config", configs.swap || {});
 }
 /**
- * Provides an interactive prompt for modifying configuration settings.
+ * modifyConfigurations
+ * ----------------------
+ * Provides an interactive command-line prompt that allows the user to modify configuration settings.
+ * The user can choose which configuration section to modify, select a key within that section,
+ * and input a new value. Numeric and boolean values are automatically parsed.
  *
- * @param configs - The configuration object to be modified.
- * @returns A promise that resolves when the modification process is complete.
+ * @param {any} configs - The configuration object containing various configuration sections.
+ *                        Expected to have keys: app, mining, solana, and swap.
+ * @returns {Promise<void>} A promise that resolves once the configuration modifications are complete.
  */
 async function modifyConfigurations(configs) {
     let done = false;
     while (!done) {
-        // Prompt user for which config section to modify.
+        // Prompt the user to select a configuration section to modify.
         const { configChoice } = await inquirer_1.default.prompt({
             type: "list",
             name: "configChoice",
@@ -47,11 +53,12 @@ async function modifyConfigurations(configs) {
                 "Done",
             ],
         });
+        // Exit the loop if the user is finished.
         if (configChoice === "Done") {
             done = true;
             break;
         }
-        // Select the appropriate configuration object.
+        // Determine the configuration object corresponding to the selected section.
         let configObject;
         switch (configChoice) {
             case "App config":
@@ -69,13 +76,14 @@ async function modifyConfigurations(configs) {
             default:
                 configObject = {};
         }
-        // Get the keys available to modify.
+        // Retrieve keys available in the chosen configuration object.
         const keys = Object.keys(configObject);
         if (keys.length === 0) {
+            // Warn the user if there are no keys to modify in the selected configuration section.
             (0, print_1.printMessageLinesBorderBox)([`No keys to modify in ${configChoice}.`], borderboxstyles_1.warningStyle);
             continue;
         }
-        // Prompt user to select a key to modify.
+        // Prompt the user to select a specific key to modify.
         const { keyChoice } = await inquirer_1.default.prompt({
             type: "list",
             name: "keyChoice",
@@ -85,13 +93,13 @@ async function modifyConfigurations(configs) {
         if (keyChoice === "Go back") {
             continue;
         }
-        // Prompt user for the new value.
+        // Prompt for the new value of the selected key.
         const { newValue } = await inquirer_1.default.prompt({
             type: "input",
             name: "newValue",
             message: `Enter new value for ${keyChoice}:`,
         });
-        // Parse the new value as a number or boolean if applicable.
+        // Attempt to parse the new value to number or boolean, if applicable.
         let parsedValue = newValue;
         if (!isNaN(Number(newValue))) {
             parsedValue = Number(newValue);
@@ -100,8 +108,8 @@ async function modifyConfigurations(configs) {
             newValue.toLowerCase() === "false") {
             parsedValue = newValue.toLowerCase() === "true";
         }
+        // Update the configuration object with the parsed value.
         configObject[keyChoice] = parsedValue;
-        // Inform the user of the update.
         (0, print_1.printMessageLinesBorderBox)([`${keyChoice} updated to ${parsedValue} in ${configChoice}.`], borderboxstyles_1.generalStyle);
     }
 }

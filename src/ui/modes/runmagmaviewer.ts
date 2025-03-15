@@ -1,8 +1,8 @@
+// viewer.ts
 /**
- * @file runmagmaviewer.ts
- * @description Provides an interactive viewer for the Magma Engine.
- * It allows the user to select between viewing a miner summary or a live miner,
- * and if needed, chooses a miner address from .env or manually inputs one.
+ * @fileoverview This module implements the Magma Engine Viewer.
+ * It prompts the user for a viewer mode via inquirer and executes the corresponding mining activity view.
+ * The module also handles reading miner addresses from the .env file.
  */
 
 import inquirer from "inquirer";
@@ -10,42 +10,62 @@ import chalk from "chalk";
 import dotenv from "dotenv";
 import { printMessageLinesBorderBox } from "../print";
 import { magmaStyle } from "../styles/borderboxstyles";
-import { viewMinerSummary, viewLiveMiner } from "../../websocket";
+import { seeMiningActivity } from "../../ws/websocket";
 
-dotenv.config(); // Load .env variables
+// Load environment variables from .env file.
+dotenv.config();
 
 /**
- * Runs the Magma Engine Viewer, prompting the user to choose the desired viewing mode,
- * and handling input for miner addresses if necessary.
+ * runMagmaViewer
+ * ---------------
+ * Prompts the user to select a viewer mode and, based on the selection, either:
+ * - Displays a miner summary,
+ * - Shows live miner details with optional address selection,
+ * - Or shows live events.
+ * 
+ * For "View Live Miner" mode, if miner addresses are found in .env, the user can choose
+ * between manual entry or selecting one from the provided addresses.
+ *
+ * @returns {Promise<void>} Resolves once the viewer mode is handled.
  */
 async function runMagmaViewer(): Promise<void> {
+  // Display the viewer header using a border box.
   printMessageLinesBorderBox(["🔍 Entering Magma Engine Viewer"], magmaStyle);
 
-  // Prompt the user for the main viewer mode.
+  // Prompt the user for main viewer mode.
   const { viewerMode } = await inquirer.prompt([
     {
       type: "list",
       name: "viewerMode",
       message: chalk.bold.green("Select Magma Engine Viewer mode:"),
-      choices: ["📋 View Miner Summary", "👁️ View Live Miner"],
+      choices: [
+        "📋 View Miner Summary",
+        "👁️ View Live Miner",
+        "👁️ View Live Events",
+      ],
     },
   ]);
 
-  // If user chooses "View Miner Summary", call the summary function.
+  // Handle "View Miner Summary" selection.
   if (viewerMode === "📋 View Miner Summary") {
-    await viewMinerSummary();
+    await seeMiningActivity(viewerMode);
     process.exit(0);
   }
 
-  // Otherwise, "View Live Miner"
-  // 1) Gather .env addresses matching MINER*_ADDRESS.
+  // Handle "View Live Events" selection.
+  if (viewerMode === "👁️ View Live Events") {
+    await seeMiningActivity(viewerMode);
+    process.exit(0);
+  }
+
+  // For "View Live Miner", proceed with address selection.
+  // 1) Gather miner addresses from environment variables (keys starting with "MINER" and ending with "_ADDRESS").
   const envAddresses = Object.entries(process.env)
     .filter(([key]) => key.startsWith("MINER") && key.endsWith("_ADDRESS"))
     .map(([_, val]) => val?.trim())
     .filter((val): val is string => !!val);
 
-  // 2) Prompt the user how they want to pick the address:
-  //    - Manually input or choose from .env.
+  // 2) Prompt user for address selection method if addresses exist in .env.
   let chosenAddress: string | undefined;
   if (envAddresses.length > 0) {
     const { pickMethod } = await inquirer.prompt([
@@ -60,18 +80,12 @@ async function runMagmaViewer(): Promise<void> {
       },
     ]);
 
+    // If manual selection is chosen, proceed without selecting from .env.
     if (pickMethod === "manual") {
-      // Call viewLiveMiner() with no params; it will prompt for the address.
-      await viewLiveMiner();
+      await seeMiningActivity(viewerMode);
       process.exit(0);
     } else {
-      // User chooses to select from .env.
-      if (envAddresses.length === 0) {
-        console.log(chalk.yellow("No addresses found in .env. Exiting."));
-        process.exit(0);
-      }
-
-      // Single-select prompt from .env addresses.
+      // Otherwise, prompt the user to select one of the provided addresses.
       const { selectedAddress } = await inquirer.prompt([
         {
           type: "list",
@@ -80,22 +94,23 @@ async function runMagmaViewer(): Promise<void> {
           choices: envAddresses,
         },
       ]);
-
       chosenAddress = selectedAddress;
     }
   } else {
-    // If no addresses are found in .env, prompt for manual input.
+    // If no addresses are found in .env, notify the user and exit.
     console.log(chalk.yellow("No miner addresses in .env, prompting manual input..."));
-    await viewLiveMiner();
     process.exit(0);
   }
 
-  // If an address was chosen from .env, pass it to viewLiveMiner.
+  // If for any reason an address wasn't chosen, log an error and exit.
   if (!chosenAddress) {
     console.log(chalk.red("No address was chosen! Exiting..."));
     process.exit(0);
   }
-  await viewLiveMiner(chosenAddress);
+
+  // Call the mining activity viewer with the chosen address.
+  await seeMiningActivity(viewerMode, { chosenAddress });
 }
 
+// Execute the viewer.
 runMagmaViewer();
