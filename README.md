@@ -349,10 +349,10 @@ AutoPond is built around a configuration-driven workflow that automates mining a
 
 Get AutoPond running with these steps:
 
-1. **Clone the Repository:**
+1. **Clone the Repository:** Navigate to the directory (folder) you wish to clone autopond into ( ```cd ./<desired directory>``` ) and run the following code.
    ```bash
-   git clone https://github.com/your-username/autopond.git
-   cd autopond
+   git clone https://github.com/drewbie1234/AUTOPOND_V1.git
+   cd ./autopond
    ```
 
 2. **Install Node.js:** Download and install Node.js (v22.13.1) 
@@ -367,12 +367,11 @@ Get AutoPond running with these steps:
    ```bash
    MINER1_PK="your-phantom-private-key"
    MINER1_ADDRESS="your-miner-address"
-   EXTNS="path/to/phantom/extension"
    ```
 
 ```MINER1_PK:``` Private key from your Phantom wallet.
 ```MINER1_ADDRESS:``` Address from your Phantom wallet.
-```EXTNS:``` File path to phantom extension installer.
+```EXTNS:``` File path to phantom extension installer. If you wish to obtain your own phantom extension installer files you can chnage the path here. Leave unchanged if you wish to use the installer provided.
 
 5. **Configure Settings#:** Modify ```./config/``` to adjust any of Configure Settings defaults:
 - `appconfig.json`
@@ -406,9 +405,8 @@ npm install
 ## Tips
 
 - **Stay Safe:** Always use a burner wallet to minimize risks.
-- **Monitor Transactions:** Check `tx_ids.txt` for swap records.
 - **Tune Performance:** Adjust `cycleDelayMs` or thresholds in configs for faster or slower runs.
-- **Support the Project:** Send SOL to `your-wallet-address` if AutoPond saves you time!
+- **Support the Project:** Send SOL to `3jRksPvB4EXwo737Jww5Ncd35tqw6VP3HBr31MMep9di` if AutoPond saves you time!
 
 
 ## License
