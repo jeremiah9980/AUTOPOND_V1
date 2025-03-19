@@ -365,14 +365,21 @@ Get AutoPond running with these steps:
 4. **Set Up Environment:** There is a file called `ENV_TEMPLATE`, change its name to `.env` in the root directory. If you wish to import your PK automatically you will need to save the relevant details in this file, you can leave EXTN as is unless yopu want to provide your own phantom extension installer:
 
    ```bash
-   MINER1_PK="your-phantom-private-key"
-   MINER1_ADDRESS="your-miner-address"
-   ```
+   
+# YOU DO NOT NEED TO SAVE YOUR PKS HERE IF YOU ARE HAPPY TO ENTER MANUALLY WHEN YOU START THE PROGRAM - CAUTION ADVISED!!!
 
-```MINER1_PK:``` Private key from your Phantom wallet.
-```MINER1_ADDRESS:``` Address from your Phantom wallet.
-```EXTNS:``` File path to phantom extension installer. If you wish to obtain your own phantom extension installer files you can chnage the path here. Leave unchanged if you wish to use the installer provided.
+# IMPORTANT!!! ONCE YOU HAVE POPULATED VARIABLE YOU NEED TO RENAME THE FILE TO ".env"
 
+# Make sure PK and ADDRESS are corresponding for miner number, add as many miners as you wish
+MINER1_PK="<MINER1_PRIVATE_KEY>"
+MINER2_PK="<MINER1_PRIVATE_KEY>"
+MINER1_ADDRESS="<MINER1_ADDRESS>"
+MINER2_ADDRESS="<MINER2_ADDRESS>"
+
+
+EXTNS="extn"
+
+```
 5. **Configure Settings#:** Modify ```./config/``` to adjust any of Configure Settings defaults:
 - `appconfig.json`
 - `miningconfig.json`
