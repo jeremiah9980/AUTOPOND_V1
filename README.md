@@ -362,7 +362,7 @@ Get AutoPond running with these steps:
    npm install
    ```
 
-4. **Set Up Environment:** Create .env in the root directory:
+4. **Set Up Environment:** There is a file called `ENV_TEMPLATE`, change its name to `.env` in the root directory. If you wish to import your PK automatically you will need to save the relevant details in this file, you can leave EXTN as is unless yopu want to provide your own phantom extension installer:
 
    ```bash
    MINER1_PK="your-phantom-private-key"
