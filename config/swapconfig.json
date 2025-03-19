@@ -9,8 +9,8 @@
   "tokenBPossibleAmounts": [7000000],
   "tokenARewardAmounts": [0.01],
   "tokenBRewardAmounts": [7000000],
-  "maxReferralFee": "0.00001",
-  "swapRounds": 25,1
+  "maxReferralFee": "0.00005",
+  "swapRounds": 25,
   "swapRewardsActive": false,
   "enableRewardsCheck": false,
   "skipSwapIfNoRewards": false,
