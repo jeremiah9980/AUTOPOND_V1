@@ -1,5 +1,7 @@
 # AutoPond
 
+![Alt text](./screenshots/banner.png)
+
 AutoPond is an automation tool that interacts with the [Pond0x](https://pond0x.com) decentralized exchange to perform automated mining and token swapping operations. It leverages Puppeteer for browser automation, connects to the Phantom wallet, and uses WebSocket-based real-time monitoring to detect active mining. The tool can operate interactively via a wizard or automatically using default configurations.
 
 ## Table of Contents
@@ -11,10 +13,6 @@ AutoPond is an automation tool that interacts with the [Pond0x](https://pond0x.c
   - [Operation Execution](#operation-execution)
   - [Cycle Management & Logging](#cycle-management--logging)
 - [Modes](#modes)
-  - [Wizard Mode](#wizard-mode)
-  - [Default Mode](#default-mode)
-  - [Ze Bot Stays On Mode](#ze-bot-stays-on-mode)
-  - [Magma Engine Viewer](#magma-engine-viewer)
 - [Configuration](#configuration)
 - [Global Statistics and Session Logging](#global-statistics-and-session-logging)
 - [Application Flow and Logic](#application-flow-and-logic)
@@ -37,17 +35,14 @@ AutoPond is an automation tool that interacts with the [Pond0x](https://pond0x.c
 ## How It Works
 
 1. **Initialization & Connection**
-
    - Launch Puppeteer with the Phantom wallet extension loaded.
    - Navigate to **Pond0x** and connect your wallet.
 
 2. **Mode Selection**
-
    - **Wizard Mode**: Interactive prompts for **Mine**, **Swap**, **Mine & Swap**, **Ze Bot Stays On**, **Magma Engine Viewer**, or **View Pond Statistics**.
    - **Default Mode**: Headlessly runs the mode and cycle count defined in `appconfig.json`.
 
 3. **Operation Execution**
-
    - **Mining**:
      1. Establish a WebSocket connection (configured in `miningconfig.json`).
      2. Detect active miners → monitor hash rate & unclaimed rewards.
@@ -58,23 +53,26 @@ AutoPond is an automation tool that interacts with the [Pond0x](https://pond0x.c
      3. Simulate UI interactions to execute and confirm the swap via Phantom.
 
 4. **Database & Logging**
-
    - Update persistent metrics in SQLite using `updateAggregatedSwapMetrics()` and `updateAggregatedMiningMetrics()`.
    - Optionally print session summaries and incremental vs. cumulative tables in your console.
    - Optionally log magma block engine summaries to a log file
 
-_See \***\*\*\*\*\*\*\***\*\*\***\*\*\*\*\*\*\***[Application Flow and Logic](#application-flow-and-logic)\***\*\*\*\*\*\*\***\*\*\***\*\*\*\*\*\*\*** for full details._## Modes
+_See [Application Flow and Logic](#application-flow-and-logic) for full details._
+
+## Modes
+
+![Alt text](./screenshots/wizard.png)
 
 ### Wizard Mode
 
 When `wizardMode` is `true` in **appconfig.json**, you’ll see an interactive menu:
 
-- **Mine**: Run N mining cycles using `miningconfig.json` settings.
-- **Swap**: Run N swap cycles using `swapconfig.json` settings.
-- **Mine and Swap**: Run mining then swap for N rounds.
-- **Ze Bot Stays On**: Continuous headless run of your default mode.
-- **Magma Engine Viewer**: Launch live WebSocket diagnostics (see below).
-- **View Pond Statistics**: Print aggregated swap/mining tables.
+- **⛏️ Mine**: Run N mining cycles using `miningconfig.json` settings.
+- **🤝 Swap**: Run N swap cycles using `swapconfig.json` settings.
+- **⛏️🤝 Mine & Swap**: Run mining then swap for N rounds.
+- **💻 Ze Bot Stays On**: Continuous headless run of your default mode.
+- **🔍 Magma Engine Viewer**: Launch live WebSocket diagnostics (see below).
+- **📊 View Pond Statistics**: Print aggregated swap/mining tables.
 - **Exit**: Quit the application.
 
 > After selecting Mine/Swap/Mine & Swap, you’ll input a positive integer for rounds.
