@@ -157,7 +157,7 @@ export class MinerStore {
         miner.status = "EXPIRED";
         miner.unclaimedRewards = 0;
         break;
-      case "valid|slashed|state":
+      case "valid|slashing|valid":
         miner.status = "SLASHED";
         miner.unclaimedRewards = 0;
         break;
@@ -169,6 +169,5 @@ export class MinerStore {
         );
         break;
     }
-
   }
 }

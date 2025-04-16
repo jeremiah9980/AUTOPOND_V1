@@ -3,10 +3,10 @@
  * @interface AppConfig
  *
  * @property {boolean} wizardMode - Enables interactive configuration wizard.
- * @property {"Mine" | "Swap" | "Mine and Swap"} defaultMode - Default operating mode ("Mine", "Swap", or "Mine and Swap").
+ * @property {"Mine" | "Swap" | "Mine and Swap"} defaultMode - Default operating mode.
  * @property {number} [defaultCycleCount] - (Optional) Default number of cycles; if not set, runs indefinitely.
  * @property {boolean} [loggingEnabled] - (Optional) Flag to enable or disable logging.
- * @property {number} [liveDecodedDisplayLimit] - (Optional) Maximum number of live decoded events to display (default: 20).
+ * @property {number} [liveDecodedDisplayLimit] - (Optional) Maximum number of live decoded events to display.
  * @property {boolean} manualaccountcreation - Flag to enable manual account creation.
  * @property {string[]} myRigAddresses - Array of rig addresses for the user's rigs.
  * @property {string[]} watchRigAddresses - Array of rig addresses to be watched.
@@ -26,7 +26,6 @@ export interface AppConfig {
  * MiningConfig - Configuration parameters for mining operations.
  * @interface MiningConfig
  *
- * @property {number} cycleDelayMs - Delay between mining cycles.
  * @property {number} activeMiningRetryDelayMs - Delay before retrying an active mining check.
  * @property {number} miningLoopFailRetryDelayMs - Delay before retrying a failed mining loop.
  * @property {number} miningSuccessDelayMs - Delay after a successful mining operation.
@@ -43,14 +42,10 @@ export interface AppConfig {
  * @property {string} confirmButtonText - Text used to confirm actions.
  * @property {string} stopClaimButtonText - Text used to stop a claim.
  * @property {string} stopAnywayButtonText - Text used to force-stop operations.
- * @property {string} wss - WebSocket URL for mining data.
- * @property {string} apiKey - API key for accessing mining data.
- * @property {number} requiredActiveMiners - Minimum number of active miners required.
  * @property {boolean} skipMiningOnFailure - Flag to skip mining if a failure occurs.
  * @property {boolean} skipMiningIfInactive - Flag to skip mining if no active mining is detected.
  */
 export interface MiningConfig {
-  cycleDelayMs: number;
   activeMiningRetryDelayMs: number;
   miningLoopFailRetryDelayMs: number;
   miningSuccessDelayMs: number;
@@ -67,11 +62,10 @@ export interface MiningConfig {
   confirmButtonText: string;
   stopClaimButtonText: string;
   stopAnywayButtonText: string;
-  wss: string;
-  apiKey: string;
-  requiredActiveMiners: number;
   skipMiningOnFailure: boolean;
   skipMiningIfInactive: boolean;
+  boostHash: boolean;
+  boostHashAmountPerSession: number;
 }
 
 /**
@@ -93,43 +87,107 @@ export interface SolanaConfig {
 }
 
 /**
+ * SwapPairConfig - Configuration for an individual trading pair used in swapping.
+ * @interface SwapPairConfig
+ *
+ * @property {string} tokenA - Symbol for token A (e.g., "SOL").
+ * @property {string} tokenB - Symbol for token B (e.g., "USDC").
+ * @property {string} [tokenAMint] - Mint address for token A (for SPL tokens; leave empty if not applicable).
+ * @property {string} [tokenBMint] - Mint address for token B (for SPL tokens; leave empty if not applicable).
+ * @property {number} tokenALowThreshold - Minimum balance threshold for token A.
+ * @property {number} tokenBLowThreshold - Minimum balance threshold for token B.
+ * @property {number} tokenAMinAmount - Minimum swap amount for token A (regular mode).
+ * @property {number} tokenAMaxAmount - Maximum swap amount for token A (regular mode).
+ * @property {number} tokenBMinAmount - Minimum swap amount for token B (regular mode).
+ * @property {number} tokenBMaxAmount - Maximum swap amount for token B (regular mode).
+ * @property {number} tokenARewardMin - Minimum swap amount for token A (rewards mode).
+ * @property {number} tokenARewardMax - Maximum swap amount for token A (rewards mode).
+ * @property {number} tokenBRewardMin - Minimum swap amount for token B (rewards mode).
+ * @property {number} tokenBRewardMax - Maximum swap amount for token B (rewards mode).
+ */
+export interface SwapPairConfig {
+  tokenA: string;
+  tokenB: string;
+  tokenAMint?: string;
+  tokenBMint?: string;
+  tokenALowThreshold: number;
+  tokenBLowThreshold: number;
+  tokenAMinAmount: number;
+  tokenAMaxAmount: number;
+  tokenBMinAmount: number;
+  tokenBMaxAmount: number;
+  tokenARewardMin: number;
+  tokenARewardMax: number;
+  tokenBRewardMin: number;
+  tokenBRewardMax: number;
+}
+
+/**
  * SwapConfig - Parameters for token swap operations.
  * @interface SwapConfig
  *
- * @property {string} tokenA - Symbol for token A (e.g., "SOL").
- * @property {string} tokenB - Symbol for token B (e.g., "USDT").
- * @property {string} [tokenAMint] - Mint address for token A (for SPL tokens; leave empty if SOL).
- * @property {string} [tokenBMint] - Mint address for token B (for SPL tokens; leave empty if SOL).
- * @property {number} tokenALowThreshold - Minimum balance threshold for token A.
- * @property {number} tokenBLowThreshold - Minimum balance threshold for token B.
- * @property {number[]} tokenAPossibleAmounts - Array of possible swap amounts for token A.
- * @property {number[]} tokenBPossibleAmounts - Array of possible swap amounts for token B.
- * @property {number[]} tokenARewardAmounts - Array of reward amounts for token A swaps.
- * @property {number[]} tokenBRewardAmounts - Array of reward amounts for token B swaps.
- * @property {string} maxReferralFee - Maximum referral fee.
- * @property {number} swapRounds - Number of swap rounds to execute.
- * @property {boolean} swapRewardsActive - Flag indicating if reward amounts are active.
- * @property {boolean} enableRewardsCheck - Flag to enable rewards check.
- * @property {boolean} skipSwapIfNoRewards - Flag to skip swap if no rewards are available.
- * @property {boolean} turboswap - Flag to enable TurboSwap mode.
+ * This interface now supports multiple trading pairs through the optional 'pairs' field.
+ * If the 'pairs' array is provided, it should contain one or more SwapPairConfig objects.
+ * For backward compatibility, individual fields for a single pair remain optional.
+ *
+ * Global swap settings (such as referral fees, round counts, delay ranges, etc.) continue to reside here.
  */
 export interface SwapConfig {
-  tokenA: string; // e.g., "SOL"
-  tokenB: string; // e.g., "USDT"
-  tokenAMint?: string; // For SPL tokens; leave empty if SOL
-  tokenBMint?: string; // For SPL tokens; leave empty if SOL
-  tokenALowThreshold: number;
-  tokenBLowThreshold: number;
-  tokenAPossibleAmounts: number[];
-  tokenBPossibleAmounts: number[];
-  tokenARewardAmounts: number[];
-  tokenBRewardAmounts: number[];
+  // Optional array of trading pairs for multi-pair support.
+  pairs?: SwapPairConfig[];
+
+  // Optional individual pair properties for backward compatibility.
+  tokenA?: string;
+  tokenB?: string;
+  tokenAMint?: string;
+  tokenBMint?: string;
+  tokenALowThreshold?: number;
+  tokenBLowThreshold?: number;
+  tokenAMinAmount?: number;
+  tokenAMaxAmount?: number;
+  tokenBMinAmount?: number;
+  tokenBMaxAmount?: number;
+  tokenARewardMin?: number;
+  tokenARewardMax?: number;
+  tokenBRewardMin?: number;
+  tokenBRewardMax?: number;
+
+  // Global swap settings.
   maxReferralFee: string;
   swapRounds: number;
   swapRewardsActive: boolean;
   enableRewardsCheck: boolean;
   skipSwapIfNoRewards: boolean;
+  useReferralList: boolean;
   turboswap: boolean;
+  swapDelayRange: [number, number];
+  swapRoundDelayRange: [number, number];
+}
+
+/**
+ * WsConfig - WebSocket settings used for mining or event listeners.
+ * @interface WsConfig
+ *
+ * @property {string} wss - WebSocket server URL.
+ * @property {string} apiKey - API key used for authorization.
+ * @property {number} heartbeatInterval - Interval for heartbeats in milliseconds.
+ * @property {number} maxReconnectDelay - Maximum delay between reconnection attempts.
+ * @property {number} activeMiningTimeout - Timeout for active mining check in milliseconds.
+ * @property {number} requiredActiveMiners - Minimum miners to consider mining active.
+ * @property {number} activityThresholdSeconds - Seconds of inactivity to consider a miner inactive.
+ * @property {boolean} enableRawLogging - Whether raw WebSocket messages should be logged.
+ * @property {boolean} enableFilteredLogging - Whether filtered WebSocket messages should be logged.
+ */
+export interface WsConfig {
+  wss: string;
+  apiKey: string;
+  heartbeatInterval: number;
+  maxReconnectDelay: number;
+  activeMiningTimeout: number;
+  requiredActiveMiners: number;
+  activityThresholdSeconds: number;
+  enableRawLogging: boolean;
+  enableFilteredLogging: boolean;
 }
 
 /**
@@ -140,10 +198,12 @@ export interface SwapConfig {
  * @property {MiningConfig} mining - Configuration parameters for mining operations.
  * @property {SolanaConfig} solana - Settings for connecting to the Solana blockchain.
  * @property {SwapConfig} swap - Parameters for token swap operations.
+ * @property {WsConfig} ws - WebSocket settings for mining or events.
  */
 export interface FullConfig {
   app: AppConfig;
   mining: MiningConfig;
   solana: SolanaConfig;
   swap: SwapConfig;
+  ws: WsConfig; // New section for WebSocket configuration.
 }

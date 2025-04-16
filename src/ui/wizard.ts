@@ -36,7 +36,8 @@ import { printTable } from "./tables/printtable";
 // runWizard: the main wizard loop
 // ----------------------------------------------------------------------
 export async function runWizard(fullConfig: FullConfig): Promise<void> {
-  const { app, mining, swap } = fullConfig;
+  const { app, mining } = fullConfig;
+  let swap = fullConfig.swap;
 
   // Outer loop: after a complete run, re‑prompt for mode selection.
   while (true) {
@@ -250,14 +251,40 @@ export async function runWizard(fullConfig: FullConfig): Promise<void> {
       "Total Cycles": effectiveRounds > 0 ? effectiveRounds : "Infinite",
       activeMiningRetryDelayMs: mining.activeMiningRetryDelayMs,
       miningLoopFailRetryDelayMs: mining.miningLoopFailRetryDelayMs,
-      miningSuccessDelayMs: mining.miningSuccessDelayMs
+      miningSuccessDelayMs: mining.miningSuccessDelayMs,
     };
-   
 
     if (effectiveMode === "Mine" || effectiveMode === "Mine and Swap") {
       printTable("⛏️  Mining config", mining);
     }
+    // --- NEW: Trading Pair Selection for Swap ---
     if (effectiveMode === "Swap" || effectiveMode === "Mine and Swap") {
+      if (swap.pairs && Array.isArray(swap.pairs)) {
+        // If more than one pair is defined, prompt the user to choose one.
+        if (swap.pairs.length > 1) {
+          const pairChoices = swap.pairs.map((pair, index) => {
+            return { name: `${pair.tokenA} / ${pair.tokenB}`, value: index };
+          });
+          const { selectedPairIndex } = await inquirer.prompt([
+            {
+              type: "list",
+              name: "selectedPairIndex",
+              message: chalk.bold.green("🤝  Choose a trading pair for swap:"),
+              choices: pairChoices,
+            },
+          ]);
+          const selectedPair = swap.pairs[selectedPairIndex];
+          // Merge the selected pair details into the overall swap config.
+          swap = { ...swap, ...selectedPair };
+        } else if (swap.pairs.length === 1) {
+          // Only one pair is available, so use it directly.
+          swap = { ...swap, ...swap.pairs[0] };
+        } else {
+          console.warn(
+            "No trading pairs defined in swap config. Using default swap settings."
+          );
+        }
+      }
       printTable("🤝  Swap config", swap);
     }
 
@@ -291,7 +318,6 @@ export async function runWizard(fullConfig: FullConfig): Promise<void> {
             [`✅ Cycle ${i + 1} complete`],
             generalStyle
           );
-          await new Promise((res) => setTimeout(res, mining.cycleDelayMs));
         }
       } else {
         let cycleCount = 0;
@@ -319,7 +345,6 @@ export async function runWizard(fullConfig: FullConfig): Promise<void> {
             [`✅ Cycle ${cycleCount} complete`],
             generalStyle
           );
-          await new Promise((res) => setTimeout(res, mining.cycleDelayMs));
         }
       }
 

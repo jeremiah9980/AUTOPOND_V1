@@ -3,13 +3,14 @@
   "popupDelayMs": 3000,
   "activeMiningRetryDelayMs": 30000,
   "miningLoopFailRetryDelayMs": 60000,
-  "miningSuccessDelayMs": 1000,
-  "maxIterations": 20,
+  "miningSuccessDelayMs": 3600000,
+  "maxIterations": 30,
   "loopIterationDelayMs": 30000,
   "miningCompleteHashRate": 0,
   "miningCompleteUnclaimedThreshold": 100000000,
-  "claimMaxThreshold": 10800000000,
+  "claimMaxThreshold": 500000000,
   "claimTimeThreshold": 120,
+  "claimBoostThreshold": 30,
   "mineButtonTrigger": "MINE",
   "confirmButtonText": "Confirm",
   "stopClaimButtonText": "STOP & CLAIM",
@@ -19,5 +20,6 @@
   "requiredActiveMiners": 10,
   "skipMiningIfInactive": true,
   "skipMiningOnFailure": true,
-  "cycleDelayMs": 10000
+  "boostHash": false,
+  "boostHashAmountPerSession": 0.1
 }

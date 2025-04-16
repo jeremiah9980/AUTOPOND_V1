@@ -1,15 +1,12 @@
 # AutoPond
 
-![Alt text](./screenshots/banner.png)
-
-
-AutoPond is a powerful automation tool designed to streamline interactions with the [Pond0x](https://pond0x.com) decentralized exchange. It automates mining and token swapping on the Solana blockchain, integrating seamlessly with the Phantom wallet. Using browser automation via Puppeteer and real-time WebSocket monitoring, AutoPond offers both an interactive wizard for hands-on control and a set-and-forget mode for continuous operation.
+AutoPond is an automation tool that interacts with the [Pond0x](https://pond0x.com) decentralized exchange to perform automated mining and token swapping operations. It leverages Puppeteer for browser automation, connects to the Phantom wallet, and uses WebSocket-based real-time monitoring to detect active mining. The tool can operate interactively via a wizard or automatically using default configurations.
 
 ## Table of Contents
 
 - [Features](#features)
 - [How It Works](#how-it-works)
-  - [Initialization & Setup](#initialization--setup)
+  - [Initialization & Connection](#initialization--connection)
   - [Mode Selection](#mode-selection)
   - [Operation Execution](#operation-execution)
   - [Cycle Management & Logging](#cycle-management--logging)
@@ -17,11 +14,8 @@ AutoPond is a powerful automation tool designed to streamline interactions with 
   - [Wizard Mode](#wizard-mode)
   - [Default Mode](#default-mode)
   - [Ze Bot Stays On Mode](#ze-bot-stays-on-mode)
+  - [Magma Engine Viewer](#magma-engine-viewer)
 - [Configuration](#configuration)
-  - [appconfig.json](#appconfigjson)
-  - [miningconfig.json](#miningconfigjson)
-  - [swapconfig.json](#swapconfigjson)
-  - [solanaconfig.json](#solanaconfigjson)
 - [Global Statistics and Session Logging](#global-statistics-and-session-logging)
 - [Application Flow and Logic](#application-flow-and-logic)
 - [Installation and Setup](#installation-and-setup)
@@ -33,228 +27,309 @@ AutoPond is a powerful automation tool designed to streamline interactions with 
 
 ## Features
 
-- **Automated Mining:**  
-  Detects active mining conditions and claims tokens when thresholds are hit (e.g., 10.8B unclaimed).
-
-- **Automated Token Swapping:**  
-  Executes SOL/USDT swaps with customizable amounts and robust retry handling.
-
-- **Interactive Wizard Mode:**  
-  Guides you through mode selection, cycle counts, or continuous operation with ease.
-
-- **Default Mode Automation:**  
-  Runs predefined mining or swapping tasks continuously or for a set number of cycles.
-
-- **Real-Time Monitoring:**  
-  Tracks mining activity via WebSocket and provides live miner stats.
+- **Automated Mining:** Automatically mines on Pond0x when active mining conditions are detected.
+- **Automated Token Swapping:** Executes token swaps based on pre-configured thresholds and amounts.
+- **Interactive Wizard Mode:** Choose Mine, Swap, Mine & Swap, Magma viewer, or Stats on demand.
+- **Default Headless Mode:** Run continuously or for a set number of cycles without prompts.
+- **Real-Time Monitoring:** WebSocket-based mining activity detection with live and filtered logging.
+- **Persistent Metrics:** Aggregate swap and mining stats in SQLite with on-demand reporting.
 
 ## How It Works
 
-AutoPond orchestrates mining and swapping on Pond0x through a clear, efficient process:
+1. **Initialization & Connection**
 
-### Initialization & Setup
-- Launches a browser with the Phantom wallet extension loaded.
-- Connects to Pond0x and establishes a WebSocket link for real-time monitoring.
+   - Launch Puppeteer with the Phantom wallet extension loaded.
+   - Navigate to **Pond0x** and connect your wallet.
 
-### Mode Selection
-- **Wizard Mode:** Prompts you to pick an operation—Mine, Swap, Mine and Swap, or Ze Bot Stays On—and set cycle counts if needed.
-- **Default Mode:** Automatically runs the mode and cycle count from `appconfig.json` when wizard mode is off.
+2. **Mode Selection**
 
-### Operation Execution
-- **Mining:** Monitors mining activity via WebSocket, tracks on-screen metrics (e.g., hash rate, unclaimed tokens), and claims rewards when conditions are met.
-- **Swapping:** Navigates to the swap page, checks token balances, selects amounts, and executes swaps with Phantom wallet confirmations.
+   - **Wizard Mode**: Interactive prompts for **Mine**, **Swap**, **Mine & Swap**, **Ze Bot Stays On**, **Magma Engine Viewer**, or **View Pond Statistics**.
+   - **Default Mode**: Headlessly runs the mode and cycle count defined in `appconfig.json`.
 
-### Cycle Management & Metrics
-- Applies configurable delays between cycles (e.g., 10 seconds from `miningconfig.json`).
-- Track session metrics and updates a database
+3. **Operation Execution**
 
-See [Application Flow and Logic](#application-flow-and-logic) for deeper insights.
+   - **Mining**:
+     1. Establish a WebSocket connection (configured in `miningconfig.json`).
+     2. Detect active miners → monitor hash rate & unclaimed rewards.
+     3. Trigger a claim when user‑defined thresholds (hash rate, unclaimed amount, time, or boost) are met.
+   - **Swapping**:
+     1. Retrieve on‑chain token balances via wallet connection.
+     2. Select swap amount (random or reward‑based) according to `swapconfig.json`.
+     3. Simulate UI interactions to execute and confirm the swap via Phantom.
 
-## Modes of Operation
+4. **Database & Logging**
 
-AutoPond offers several modes to suit your operational needs, configured via `appconfig.json`. The wizard guides you through mode selection and cycle execution, prompting you for the number of cycles you wish to run.
+   - Update persistent metrics in SQLite using `updateAggregatedSwapMetrics()` and `updateAggregatedMiningMetrics()`.
+   - Optionally print session summaries and incremental vs. cumulative tables in your console.
+   - Optionally log magma block engine summaries to a log file
 
-![Alt text](./screenshots/wizard.png)
+_See \***\*\*\*\*\*\*\***\*\*\***\*\*\*\*\*\*\***[Application Flow and Logic](#application-flow-and-logic)\***\*\*\*\*\*\*\***\*\*\***\*\*\*\*\*\*\*** for full details._## Modes
 
 ### Wizard Mode
-When `wizardMode` is set to `true`, you can choose from these options:
 
-- **⛏️ Mine:**  
-  Runs the specified number of mining cycles. You'll be prompted to enter how many mining cycles you want to execute.
+When `wizardMode` is `true` in **appconfig.json**, you’ll see an interactive menu:
 
-- **🤝 Swap:**  
-  Executes the specified number of swap cycles. You'll be prompted to enter the number of swap cycles to run. A swap cycle consists of x numebr of swap rounds (set in config)
+- **Mine**: Run N mining cycles using `miningconfig.json` settings.
+- **Swap**: Run N swap cycles using `swapconfig.json` settings.
+- **Mine and Swap**: Run mining then swap for N rounds.
+- **Ze Bot Stays On**: Continuous headless run of your default mode.
+- **Magma Engine Viewer**: Launch live WebSocket diagnostics (see below).
+- **View Pond Statistics**: Print aggregated swap/mining tables.
+- **Exit**: Quit the application.
 
-- **⛏️🤝 Mine and Swap:**  
-  Runs a mining cycle followed by a swap cycle for each round. You'll be asked for the number of rounds you want to perform. Again each swap cycle will perorm x amount of swaps....maybe set to 18 to replenish boost?
+> After selecting Mine/Swap/Mine & Swap, you’ll input a positive integer for rounds.
 
-- **💻 Ze Bot Stays On:**  
-  Continuously runs the default cycle without prompting for a cycle count until you manually stop the process.
+#### Delays & Retries
 
-- **🔍 Magma Engine Viewer:**  
-  Launches a viewer process for inspecting additional operational details.
+Controlled by `miningconfig.json` & `swapconfig.json`:
 
-- **📊 View Pond Statistics:**  
-  Displays real-time aggregated metrics directly from the database.
+- `initialDelayMs`, `popupDelayMs`, `activeMiningRetryDelayMs`
+- `miningLoopFailRetryDelayMs`, `miningSuccessDelayMs`, `loopIterationDelayMs`
+- `swapDelayRange`, `swapRoundDelayRange`
+- Flags: `skipMiningIfInactive`, `skipMiningOnFailure`, `skipSwapIfNoRewards`
 
-Before execution, you’ll also be prompted to confirm wallet readiness and choose an account import method, ensuring a secure launch of the browser and proper navigation to the platform.
+---
 
-## Phantom Wallet Integration
+### Default Mode
 
-AutoPond streamlines the Phantom Wallet onboarding process to simplify account setup and ensure secure access. Key features include:
+When `wizardMode` is `false`, AutoPond runs immediately:
 
-- **Account Import Options:**  
-  Choose between manual import or automated import using private keys stored in your environment variables.
-  - **Manual Import:**  
-    Follow the on-screen instructions in the Phantom pop-up to create or import your wallet.
-  - **Auto-Import (🔮):**  
-    Retrieve your private key from `.env` and automatically fill in the wallet setup fields.
+- **Operation**: `appconfig.defaultMode` (`"Mine"`, `"Swap"`, or `"Mine and Swap"`).
+- **Cycles**: `appconfig.defaultCycleCount` (`0` = infinite).
+- **Behavior**: Applies all delays, retries, and optional boosting logic (`boostHash`, `boostHashAmountPerSession`).
 
-- **Seamless UI Automation:**  
-  AutoPond simulates smooth mouse movements and clicks to:
-  - Populate the wallet "Name" and "Private key" fields.
-  - Enter and confirm your wallet password.
-  - Accept Terms-of-Service and complete the import process with minimal manual intervention.
+---
 
-- **Phantom Pop-Up Handling:**  
-  The system detects the Phantom Wallet pop-up and automatically clicks the required buttons (such as "Import" or "Continue") to advance the onboarding flow.
+### Ze Bot Stays On Mode
 
-**Warning:** Storing private keys in your `.env` file can expose sensitive information if the file is not properly secured. **Always use a burner wallet for testing purposes** and ensure your environment files are protected and excluded from version control. DON NOT EVER DELETE .gitignore and commit your /env as this will expose your PRIVATE KEY!!
+Always‑on, infinite loop of your default operation:
 
-This integrated process ensures that your Phantom Wallet is quickly and securely set up, allowing you to focus on mining and swapping operations without manual hassle.
+- Auto-reconnects WebSocket on errors.
+- Relaunches browser on crashes.
+- Ideal for 24/7 headless deployment.
 
+> Stop with **Ctrl+C** or select **Exit** in the wizard.
+
+---
+
+### Magma Engine Viewer
+
+A real‑time WebSocket explorer. After launch choose one:
+
+1. **Check Active Mining**
+   - Runs for `wsconfig.activeMiningTimeout` ms.
+   - Outputs: `👥 Detected X active miners…`
+2. **View Miner Summary**
+   - Displays top 20 miners by claimed/unclaimed/hash/boost/status.
+   - Options: Refresh or Quit.
+3. **View Live Miner**
+   - Enter a miner key or signature.
+   - Streams only that miner’s events, printing a mini‑table each update.
+4. **View Live Events**
+   - Select status filters (e.g. RUNNING, CLAIMING, NO FILTER).
+   - Streams all matching messages in table format.
+
+**Logging to file:**
+
+- `wsconfig.enableRawLogging=true` → append every frame to `rawMessages.log`.
+- `wsconfig.enableFilteredLogging=true` → append filtered frames to `filteredMessages.log`.
+- Heartbeat every `heartbeatInterval` ms; auto‑reconnect on live‑miner mode.
+
+> Press **Q** in any viewer to return to the main menu.
+
+---
+
+### View Pond Statistics
+
+Runs `viewPondStatistics()`:
+
+1. **Swap Metrics** (`swap_metrics` table)
+   - Totals: rounds, attempts, fees, volumes, failures & error breakdown.
+2. **Mining Metrics** (`mining_metrics` table)
+   - Totals: rounds, claimed/unclaimed, avg hash rate, time, boost & extras.
+3. **Output**: Neat console tables via `printTable()`.
+
+> Disable with `"loggingEnabled": false` in `appconfig.json`.
 
 ## Configuration
 
-AutoPond relies on four JSON files in `./config/` for customization. Here’s what’s currently set:
+Edit the JSON files in the root:
+
+- **appconfig.json**: wizard vs default, loggingEnabled, defaultCycleCount…
+- **miningconfig.json**: delays, thresholds, WebSocket URL & API key, flags…
+- **swapconfig.json**: pairs[], thresholds, amount ranges, referral settings…
+- **solanaconfig.json**: RPC endpoint, WPOND detection…
+- **wsconfig.json**: WebSocket settings & logging flags…
 
 ### appconfig.json
-Controls overall behavior:
+
+This file controls high-level application behavior. Example configuration:
+
 ```json
 {
   "wizardMode": true,
   "defaultMode": "Mine and Swap",
   "loggingEnabled": true,
-  "cycleDelayMs": 3000,
   "defaultCycleCount": 10,
   "liveDecodedDisplayLimit": 20,
-  "myRigAddresses": [
-    "<MINER 1 ADDRES HERE>",
-    "<ADD MORE MINERS>"
-    
-  ],
+  "myRigAddresses": ["", ""],
   "watchRigAddresses": []
 }
 ```
 
-| Key                                 | Type      | Description                                                                                     |
-|-------------------------------------|-----------|-------------------------------------------------------------------------------------------------|
-| `wizardMode`                        | Boolean   | Enables interactive wizard if `true`; uses default settings if `false`.                         |
-| `defaultMode`                       | String    | Sets the operation mode when wizard is off: `"Mine"`, `"Swap"`, or `"Mine and Swap"`.           |
-| `loggingEnabled`                    | Boolean   | Turns on detailed logging and stats display if `true`.                                          |
-| `cycleDelayMs`                      | Number    | Delay (ms) between cycles when not overridden by `miningconfig.json` (3000 ms = 3s).            |
-| `defaultCycleCount`                 | Number    | Number of cycles to run in default mode; 0 for continuous operation (10 cycles).                |
-| `liveDecodedDisplayLimit`           | Number    | Maximum number of miner stats shown in Magma Viewer (20).                                       |
-| `myRigAddresses`                    | String[]  | Array of your miner addresses to monitor (2 addresses listed).                                  |
-| `watchRigAddresses`                 | String[]  | Array of additional addresses to monitor (currently empty).                                     |
-
+| Key                       | Type     | Description                                                                                   |
+| ------------------------- | -------- | --------------------------------------------------------------------------------------------- |
+| `wizardMode`              | Boolean  | If `true`, run in interactive wizard mode; otherwise use defaults.                            |
+| `defaultMode`             | String   | Default operation when wizard mode is off. Options: `"Mine"`, `"Swap"`, or `"Mine and Swap"`. |
+| `loggingEnabled`          | Boolean  | Enable detailed logging & session statistics.                                                 |
+| `defaultCycleCount`       | Number   | Number of cycles to run in default mode. `0` means run indefinitely.                          |
+| `liveDecodedDisplayLimit` | Number   | Max WebSocket events to show in **Live Events** before discarding older entries.              |
+| `myRigAddresses`          | String[] | Your miner addresses—preselected in views and filters.                                        |
+| `watchRigAddresses`       | String[] | Additional miner addresses to monitor alongside your own.                                     |
 
 ### miningconfig.json
-Configures mining operations:
+
+This file contains settings specific to mining operations and timing.
+
 ```json
 {
   "initialDelayMs": 4000,
   "popupDelayMs": 3000,
   "activeMiningRetryDelayMs": 30000,
   "miningLoopFailRetryDelayMs": 60000,
-  "miningSuccessDelayMs": 1000,
-  "maxIterations": 20,
+  "miningSuccessDelayMs": 14400000,
+  "maxIterations": 30,
   "loopIterationDelayMs": 30000,
   "miningCompleteHashRate": 0,
   "miningCompleteUnclaimedThreshold": 100000000,
-  "claimMaxThreshold": 10800000000,
+  "claimMaxThreshold": 500000000,
   "claimTimeThreshold": 120,
+  "claimBoostThreshold": 30,
   "mineButtonTrigger": "MINE",
   "confirmButtonText": "Confirm",
   "stopClaimButtonText": "STOP & CLAIM",
   "stopAnywayButtonText": "STOP ANYWAY",
-  "wss": "wss://vkqjvwxzsxilnsmpngmc.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrcWp2d3h6c3hpbG5zbXBuZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYwODExMjMsImV4cCI6MjA0MTY1NzEyM30.u9gf6lU2fBmf0aiC7SYH4vVeWMRnGRu4ZZ7xOGl-XuI&eventsPerSecond=5&vsn=1.0.0",
-  "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrcWp2d3h6c3hpbG5zbXBuZ21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYwODExMjMsImV4cCI6MjA0MTY1NzEyM30.u9gf6lU2fBmf0aiC7SYH4vVeWMRnGRu4ZZ7xOGl-XuI",
+  "wss": "wss://vkqjvwxzsxilnsmpngmc.supabase.co/realtime/v1/websocket?apikey=...&eventsPerSecond=5&vsn=1.0.0",
+  "apiKey": "YOUR_API_KEY_HERE",
   "requiredActiveMiners": 10,
   "skipMiningIfInactive": true,
   "skipMiningOnFailure": true,
-  "cycleDelayMs": 10000
+  "boostHash": true,
+  "boostHashAmountPerSession": 0.1
 }
 ```
 
-| Key                                 | Type      | Description                                                                                     |
-|-------------------------------------|-----------|-------------------------------------------------------------------------------------------------|
-| `initialDelayMs`                    | Number    | Delay (ms) before starting mining after page load (4000 ms = 4s).                               |
-| `popupDelayMs`                      | Number    | Delay (ms) after triggering Phantom popup (3000 ms = 3s).                                       |
-| `activeMiningRetryDelayMs`          | Number    | Delay (ms) before retrying mining activity check (30000 ms = 30s).                              |
-| `miningLoopFailRetryDelayMs`        | Number    | Delay (ms) before retrying after a mining loop failure (60000 ms = 60s).                        |
-| `miningSuccessDelayMs`              | Number    | Delay (ms) after a successful claim (1000 ms = 1s).                                             |
-| `maxIterations`                     | Number    | Max loops before forcing a claim or stop (20).                                                  |
-| `loopIterationDelayMs`              | Number    | Delay (ms) between mining loop checks (30000 ms = 30s).                                         |
-| `miningCompleteHashRate`            | Number    | Hash rate threshold to trigger a claim (0 = claim when stopped).                                |
-| `miningCompleteUnclaimedThreshold`  | Number    | Min unclaimed tokens to claim when hash rate is met (100000000 = 100M).                         |
-| `claimMaxThreshold`                 | Number    | Max unclaimed tokens to force a claim (10800000000 = 10.8B).                                    |
-| `claimTimeThreshold`                | Number    | Time (seconds) to force a claim if unclaimed meets min (120s).                                  |
-| `mineButtonTrigger`                 | String    | Button text to start mining ("MINE").                                                           |
-| `confirmButtonText`                 | String    | Phantom confirmation button text ("Confirm").                                                   |
-| `stopClaimButtonText`               | String    | Button to claim tokens ("STOP & CLAIM").                                                        |
-| `stopAnywayButtonText`              | String    | Button to stop without claiming ("STOP ANYWAY").                                                |
-| `wss`                               | String    | WebSocket URL for mining detection (Supabase URL).                                              |
-| `apiKey`                            | String    | API key for WebSocket authentication.                                                           |
-| `requiredActiveMiners`              | Number    | Min active miners for mining to proceed (10).                                                   |
-| `skipMiningIfInactive`              | Boolean   | Skips mining if no activity detected (`true`).                                                  |
-| `skipMiningOnFailure`               | Boolean   | Skips mining on failure (`true`).                                                               |
-| `cycleDelayMs`                      | Number    | Delay (ms) between cycles (10000 ms = 10s).                                                     |
-
+| Key                                | Type    | Description                                                                                            |
+| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `initialDelayMs`                   | Number  | Delay before starting the mining process after establishing connection (ms).                           |
+| `popupDelayMs`                     | Number  | Delay after triggering the Phantom wallet popup before proceeding (ms).                                |
+| `activeMiningRetryDelayMs`         | Number  | Delay before retrying active‑mining detection when none is found (ms).                                 |
+| `miningLoopFailRetryDelayMs`       | Number  | Delay before restarting the mining loop after a critical failure or error (ms).                        |
+| `miningSuccessDelayMs`             | Number  | Delay (e.g., 4 hours = 14 400 000 ms) to wait after a successful claim before starting the next cycle. |
+| `maxIterations`                    | Number  | Maximum iterations allowed within a single mining session loop.                                        |
+| `loopIterationDelayMs`             | Number  | Interval between consecutive on-screen value reads (hash rate, unclaimed tokens) in ms.                |
+| `miningCompleteHashRate`           | Number  | Hash rate threshold signaling “complete” mining, triggering a standard claim.                          |
+| `miningCompleteUnclaimedThreshold` | Number  | Unclaimed token threshold to trigger a standard claim.                                                 |
+| `claimMaxThreshold`                | Number  | If unclaimed tokens ≥ this value, force an immediate claim.                                            |
+| `claimTimeThreshold`               | Number  | Time threshold (seconds) to force a claim even if token thresholds haven’t been met.                   |
+| `claimBoostThreshold`              | Number  | Boost threshold: if boost events ≥ this value, trigger an immediate claim.                             |
+| `mineButtonTrigger`                | String  | Label of the on-page “Mine” button used to initiate mining.                                            |
+| `confirmButtonText`                | String  | Label of the Phantom “Confirm” button in the wallet popup.                                             |
+| `stopClaimButtonText`              | String  | Label of the in-page “STOP & CLAIM” button.                                                            |
+| `stopAnywayButtonText`             | String  | Label of the in-page “STOP ANYWAY” button.                                                             |
+| `wss`                              | String  | WebSocket URL for real-time mining activity detection (including eventsPerSecond & version params).    |
+| `apiKey`                           | String  | API key used to authenticate with the WebSocket server.                                                |
+| `requiredActiveMiners`             | Number  | Number of required active miners for detection logic.                                                  |
+| `skipMiningIfInactive`             | Boolean | If `true`, skip mining when no activity is detected; if `false`, retry until detection.                |
+| `skipMiningOnFailure`              | Boolean | If `true`, abort on critical failures instead of retrying.                                             |
+| `boostHash`                        | Boolean | Enable hash-boosting behavior between sessions.                                                        |
+| `boostHashAmountPerSession`        | Number  | Amount of boost (work units) to apply each session when `boostHash` is enabled.                        |
 
 ### swapconfig.json
-Configures swapping operation:
+
+**IMPORTANT:** You must have some of the token in your wallet for the token slection to work correctly!
+
+This file configures the token swap operations. An example configuration might include:
+
 ```json
 {
-  "tokenA": "SOL",
-  "tokenB": "USDT",
-  "tokenAMint": "",
-  "tokenBMint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-  "tokenALowThreshold": 0.01,
-  "tokenBLowThreshold": 3,
-  "tokenAPossibleAmounts": [0.000052, 0.000054, 0.000058],
-  "tokenBPossibleAmounts": [0.01, 0.02, 0.015],
-  "tokenARewardAmounts": [0.000052, 0.000054, 0.000053],
-  "tokenBRewardAmounts": [0.01, 0.01, 0.03],
-  "swapRounds": 20,
+  "pairs": [
+    {
+      "tokenA": "USDC",
+      "tokenB": "SOL",
+      "tokenAMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "tokenBMint": "So11111111111111111111111111111111111111112",
+      "tokenALowThreshold": 10,
+      "tokenBLowThreshold": 0.1,
+      "tokenAMinAmount": 10,
+      "tokenAMaxAmount": 12,
+      "tokenBMinAmount": 0.09,
+      "tokenBMaxAmount": 0.1,
+      "tokenARewardMin": 10,
+      "tokenARewardMax": 12,
+      "tokenBRewardMin": 0.08,
+      "tokenBRewardMax": 0.1
+    },
+    {
+      "tokenA": "USDT",
+      "tokenB": "SOL",
+      "tokenAMint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      "tokenBMint": "So11111111111111111111111111111111111111112",
+      "tokenALowThreshold": 10,
+      "tokenBLowThreshold": 0.1,
+      "tokenAMinAmount": 10,
+      "tokenAMaxAmount": 12,
+      "tokenBMinAmount": 0.09,
+      "tokenBMaxAmount": 0.1,
+      "tokenARewardMin": 10,
+      "tokenARewardMax": 12,
+      "tokenBRewardMin": 0.08,
+      "tokenBRewardMax": 0.1
+    }
+  ],
+  "maxReferralFee": "0.000007",
+  "swapRounds": 10,
   "swapRewardsActive": false,
   "enableRewardsCheck": false,
   "skipSwapIfNoRewards": false,
-  "turboswap": true
+  "useReferralList": true,
+  "turboswap": false,
+  "swapDelayRange": [10000, 12000],
+  "swapRoundDelayRange": [15000, 20000]
 }
 ```
 
-| Key                                 | Type      | Description                                                                                     |
-|-------------------------------------|-----------|-------------------------------------------------------------------------------------------------|
-| `tokenA`                            | String    | First token ("SOL").                                                                            |
-| `tokenB`                            | String    | Second token ("USDT").                                                                          |
-| `tokenAMint`                        | String    | Mint address for token A (blank for SOL).                                                       |
-| `tokenBMint`                        | String    | Mint address for token B (USDT mint).                                                           |
-| `tokenALowThreshold`                | Number    | Min SOL balance before flipping (0.01 SOL).                                                     |
-| `tokenBLowThreshold`                | Number    | Min USDT balance before flipping (3 USDT).                                                      |
-| `tokenAPossibleAmounts`             | Number[]  | Possible SOL swap amounts (e.g., 0.000054).                                                     |
-| `tokenBPossibleAmounts`             | Number[]  | Possible USDT swap amounts (e.g., 0.015).                                                       |
-| `tokenARewardAmounts`               | Number[]  | SOL amounts for reward mode (e.g., 0.000053; disabled).                                         |
-| `tokenBRewardAmounts`               | Number[]  | USDT amounts for reward mode (e.g., 0.03; disabled).                                            |
-| `swapRounds`                        | Number    | Number of swap cycles (20).                                                                     |
-| `swapRewardsActive`                 | Boolean   | Uses reward amounts if `true` (currently `false`).                                              |
-| `enableRewardsCheck`                | Boolean   | Checks for WPOND transfers if `true` (`false`).                                                 |
-| `skipSwapIfNoRewards`               | Boolean   | Skips swaps if no rewards (`false`).                                                            |
-| `turboswap`                         | Boolean   | Speeds up swaps by reusing settings (`true`).                                                   |
+| Key                   | Type     | Description                                                                     |
+| --------------------- | -------- | ------------------------------------------------------------------------------- |
+| `pairs`               | Array    | List of token-pair configurations, each specifying swap thresholds and amounts. |
+| `maxReferralFee`      | String   | Maximum referral fee per swap, in SOL units.                                    |
+| `swapRounds`          | Number   | Number of swap attempts per session.                                            |
+| `swapRewardsActive`   | Boolean  | Whether to use reward-based amounts instead of random ranges.                   |
+| `enableRewardsCheck`  | Boolean  | If `true`, checks on-chain reward transfers before swapping.                    |
+| `skipSwapIfNoRewards` | Boolean  | If `true`, skips the swap when no rewards are detected.                         |
+| `useReferralList`     | Boolean  | If `true`, routes swaps through saved referral addresses when eligible.         |
+| `turboswap`           | Boolean  | Enable the turbo swap UI for faster execution, if supported.                    |
+| `swapDelayRange`      | Number[] | `[minMs, maxMs]` delay between individual swap steps, randomly selected.        |
+| `swapRoundDelayRange` | Number[] | `[minMs, maxMs]` delay between full swap rounds, randomly selected.             |
 
+**Each object in `pairs` includes:**
+
+| Key                                       | Type   | Description                                                       |
+| ----------------------------------------- | ------ | ----------------------------------------------------------------- |
+| `tokenA`/`tokenB`                         | String | Symbols of the two tokens in the pair (e.g., "USDC", "SOL").      |
+| `tokenAMint`/`tokenBMint`                 | String | On-chain mint addresses for each token.                           |
+| `tokenALowThreshold`/`tokenBLowThreshold` | Number | Minimum balance thresholds for swaps or flips.                    |
+| `tokenAMinAmount`/`tokenAMaxAmount`       | Number | Min/max amounts for random swaps when reward mode is inactive.    |
+| `tokenBMinAmount`/`tokenBMaxAmount`       | Number | Min/max amounts for random swaps when reward mode is inactive.    |
+| `tokenARewardMin`/`tokenARewardMax`       | Number | Min/max amounts when reward mode (`swapRewardsActive`) is `true`. |
+| `tokenBRewardMin`/`tokenBRewardMax`       | Number | Min/max amounts when reward mode (`swapRewardsActive`) is `true`. |
+
+_Note: Adjust or extend the `swapconfig.json` file as needed for your specific swapping requirements._
 
 ### solanaconfig.json
-Sets Solana options:
+
+This configuration file is used to connect to the Solana blockchain and configure the rewards detector. It specifies the RPC endpoint for accessing the Solana network and sets parameters related to WPOND transfer monitoring for reward detection. An example configuration might include:
+
 ```json
 {
   "rpcEndpoint": "https://api.mainnet-beta.solana.com",
@@ -265,161 +340,362 @@ Sets Solana options:
 }
 ```
 
-| Key                                 | Type      | Description                                                                                     |
-|-------------------------------------|-----------|-------------------------------------------------------------------------------------------------|
-| `rpcEndpoint`                       | String    | Solana RPC URL (mainnet).                                                                       |
-| `wpondTransferTimeThreshold`        | Number    | Time (seconds) for recent WPOND transfers (900s).                                               |
-| `rewardsWalletAddress`              | String    | Wallet monitored for rewards.                                                                   |
-| `wpondTokenMint`                    | String    | WPOND token mint address.                                                                       |
-| `discountWalletAddresses`           | String[]  | Addresses excluded from reward detection.                                                       |
+| Key                          | Type     | Description                                                                                           |
+| ---------------------------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| `rpcEndpoint`                | String   | The URL of the Solana RPC endpoint used to connect to the Solana network.                             |
+| `wpondTransferTimeThreshold` | Number   | Maximum time (in seconds) to consider a WPOND transfer as recent for reward detection.                |
+| `rewardsWalletAddress`       | String   | The address of the wallet that receives WPOND transfers and is monitored for reward-based operations. |
+| `wpondTokenMint`             | String   | The mint address of the WPOND token on Solana.                                                        |
+| `discountWalletAddresses`    | String[] | Addresses excluded from rewards detection (e.g., internal or discounted wallets).                     |
+|                              |
 
-## Real-Time Metrics and Data Persistence
+### wsconfig.json
 
-AutoPond now delivers up-to-date performance tracking by moving away from traditional log-based methods. All key metrics for mining and swapping are dynamically aggregated in memory and committed immediately to the database.
+```json
+{
+  "wss": "wss://vkqjvwxzsxilnsmpngmc.supabase.co/realtime/v1/websocket?apikey=YOUR_API_KEY&eventsPerSecond=5&vsn=1.0.0",
+  "apiKey": "YOUR_API_KEY",
+  "heartbeatInterval": 3000,
+  "maxReconnectDelay": 10000,
+  "activeMiningTimeout": 30000,
+  "requiredActiveMiners": 5,
+  "activityThresholdSeconds": 60,
+  "enableRawLogging": false,
+  "enableFilteredLogging": false
+}
+```
 
-- **Immediate Data Capture:**  
-  Each mining and swap cycle's performance—such as mining duration, tokens claimed, and swap volumes—is computed on the fly and held in memory.
+| Key                        | Type    | Description                                                                                                                         |
+| -------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `wss`                      | String  | WebSocket URL for mining-activity detection (includes `apikey`, `eventsPerSecond`, and protocol version parameters).                |
+| `apiKey`                   | String  | API key for authenticating with the WebSocket server.                                                                               |
+| `heartbeatInterval`        | Number  | Interval in milliseconds between Phoenix heartbeat messages to keep the connection alive.                                           |
+| `maxReconnectDelay`        | Number  | Maximum delay in milliseconds before attempting to reconnect after an unexpected socket closure.                                    |
+| `activeMiningTimeout`      | Number  | Timeout in milliseconds for the **Check Active Mining** command before it aborts and reports inactivity.                            |
+| `requiredActiveMiners`     | Number  | Number of active miners that must be detected by the WebSocket before considering the pool “active.”                                |
+| `activityThresholdSeconds` | Number  | Maximum age in seconds of a miner’s last activity timestamp to still count as “active.”                                             |
+| `enableRawLogging`         | Boolean | If `true`, writes every incoming raw WebSocket message to the `rawMessages.log` file.                                               |
+| `enableFilteredLogging`    | Boolean | If `true`, writes only messages passing the active filter to the filtered-log file, reducing log volume and focusing on key events. |
 
-- **Direct Database Integration:**  
-  The system employs functions like `updateAggregatedSwapMetrics()` and `updateAggregatedMiningMetrics()` to instantly update cumulative metrics in the database. This approach ensures that all performance data remains current and reliable without the overhead of session logs or static files.
+## Database
 
-- **Dynamic Reporting:**  
-  The `viewPondStatistics()` function retrieves the latest metrics from the database, parsing and displaying them in well-organized tables for instant insights into system performance.
+AutoPond persists performance metrics in a local SQLite database (`appMetrics.db`), maintained across runs:
+
+### Swap Metrics
+
+Updated each cycle by `updateAggregatedSwapMetrics()`, tracked in the `swap_metrics` table:
+
+- **Total Swap Rounds**
+- **Successful / Failed / Aborted Swap Rounds**
+- **Total Swap Attempts**
+- **Total Transaction Fees (SOL)**
+- **Volume by Token** (e.g. USDC, SOL)
+- **Swaps by Token Pair** (e.g. USDC-SOL)
+- **Referral Fees by Token**
+- **Pre‑Sign Failures** (`insufficient`, `userAbort`, `other`)
+- **Post‑Sign Failures** (`slippageTolerance`, `transactionReverted`, `other`)
+- **Extra Swap Errors** (any additional error categories)
+
+### Mining Metrics
+
+Updated each session by `updateAggregatedMiningMetrics()`, stored in the `mining_metrics` table:
+
+- **Total Mining Rounds**
+- **Successful vs. Failed Rounds**
+- **Total Claimed Amount**
+- **Total Unclaimed Amount**
+- **Average Hash Rate**
+- **Total Mining Time (min)**
+- **Boost** (average across sessions)
+- **Extra Mining Data** (e.g. loop iterations, custom counters)
+
+ip:\*\* Set `"loggingEnabled": false` in `appconfig.json` to suppress these console reports.
+
+## What AutoPond Monitors
+
+- **Mining Activity**
+
+  - Active‑miner count via WebSocket
+  - Real‑time hash rate (current & average)
+  - Unclaimed token amount (current & incremental)
+  - Claim triggers (hash‑rate thresholds, unclaimed thresholds, time‑based, boost‑count)
+  - Boost events and total boost applied per session
+  - Loop iteration count and per‑iteration delay
+  - Session duration (minutes)
+  - Success vs. failure of each claim round
+
+- **Swap Activity**
+
+  - On‑chain token balances (SOL & SPL) for each pair
+  - Balance‑threshold checks and automatic “flip” between token A ↔ B
+  - Swap amount selection (standard vs. reward‑based)
+  - Total swap rounds, successful / failed / aborted counts
+  - Pre‑sign failures (insufficient funds, user abort, other)
+  - Post‑sign failures (slippage tolerance, transaction reverted, other)
+  - Volume swapped per token
+  - Referral fees collected per token
+  - Total transaction fees paid (SOL)
+  - Any extra swap errors encountered
+
+- **Application Health & Resilience**
+
+  - WebSocket connection status and reconnect attempts
+  - Browser launch/closure events (Puppeteer)
+  - Phantom wallet connection success/failures
+  - Automatic retry counts for mining & swap loops
+  - Any uncaught errors during cycles
+
+- **Persistent Aggregates (SQLite)**
+  - Cumulative metrics in `swap_metrics` and `mining_metrics` tables
+  - On‑demand “View Pond Statistics” console summaries
 
 ## Application Flow and Logic
 
-AutoPond is built around a configuration-driven workflow that automates mining and swapping operations while updating performance metrics in real time. The system uses Puppeteer to automate UI interactions, integrates with Solana for blockchain data, and commits metric updates directly to the database.
+### Mining Flow Logic
 
-### Mining Flow
+1. **Active Mining Detection**
 
-1. **Configuration and Initialization:**  
-   The mining process begins by loading parameters (via `loadMiningConfig()`) that define delays, thresholds, and UI trigger texts. These settings determine how long the system waits before starting, how frequently it checks the mining dashboard, and the conditions that trigger a token claim.
+   - Establish a WebSocket connection using `miningconfig.wss` and authenticate with `miningconfig.apiKey`.
+   - If no active miners are found and `skipMiningIfInactive` is `true`, skip the entire mining phase; otherwise wait `activeMiningRetryDelayMs` and recheck.
 
-2. **Session Start and LCD Metrics Reading:**  
-   After an initial delay, the mining session is launched. The system interacts with the mining UI—initiating the session by clicking the designated "MINE" button—and then continuously reads on-screen metrics (from elements with class `lcdbox`) such as connection status, unclaimed tokens, elapsed time, hash rate, and boost.
+2. **Initial Delay & Popup**
 
-3. **In-Memory Metrics Monitoring:**  
-   The mining loop periodically updates in-memory metrics:
-   - **Total Rounds:** Counts the number of mining iterations.
-   - **Token Metrics:** Tracks unclaimed tokens and computes incremental increases.
-   - **Performance Averages:** Calculates the average hash rate and tracks elapsed mining time.
-   - **Boost Monitoring:** Captures any increases in boost levels.
-   
-   These metrics are continually compared against configured thresholds (e.g., `claimMaxThreshold`, `claimTimeThreshold`, and a target hash rate) to determine if a claim action should be triggered.
+   - Wait `initialDelayMs`.
+   - Trigger the on‑page “Mine” button and Phantom popup via `handlephanpopup()`.
+   - Wait `popupDelayMs`.
 
-4. **Token Claiming and Final Update:**  
-   When claim conditions are met—whether due to reaching maximum unclaimed tokens, time limits, or specific hash rate criteria—the system initiates a claim action via UI automation (using functions like `clickbyinnertxt()`). The final metrics of the session are then committed to the database through `updateAggregatedMiningMetrics()`, marking the end of the mining cycle.
+3. **Mining Session Loop**  
+   Repeat until a claim/stop condition is met:
 
-### Swap Flow
+   - **Read LCD** every `loopIterationDelayMs` via `updatelcd()`, parsing `TIME`, `HASHRATE`, `UNCLAIMED`, and `BOOST`.
+   - **Update Metrics** (`updateMetrics()`):
+     - Compute `unclaimedIncrement`, reset on reward.
+     - Recalculate `avgHashRate`, `miningTimeMin`, `miningTimeIncrement`.
+     - Track `maxBoost` and register first boost after 5 iterations.
+     - Flush to SQLite via `updateAggregatedMiningMetrics()`.
+   - **Hash‑Boost**: once after iteration ≥ 1 if `boostHash = true`, call `triggerBoostAndSign()` then disable further boosts this session.
+   - **Evaluate Claim Conditions** (`checkClaimConditions()`):
+     1. **Max Iterations** (`iterationCount > maxIterations`) → forced claim if `unclaimed ≥ miningCompleteUnclaimedThreshold`.
+     2. **Max Threshold** (`unclaimed ≥ claimMaxThreshold`) → forced claim.
+     3. **Zero‑Hash Start** (hashRate = 0 after ≥ 5 checks) → stop without claiming.
+     4. **Time Threshold** (`TIME ≥ claimTimeThreshold`) → claim if `unclaimed ≥ miningCompleteUnclaimedThreshold`, else stop.
+     5. **Standard Claim** (hashRate = miningCompleteHashRate **and** `unclaimed > miningCompleteUnclaimedThreshold`).
+     6. **Boost Drop** (after ≥ 5 iterations, `BOOST < maxBoost`) → claim.
+   - If no condition fires, wait `loopIterationDelayMs` before next iteration.
 
-1. **Wallet Connection and Setup:**  
-   The swap process starts with connecting to the Phantom wallet. The system retrieves the wallet’s public key and checks on-chain balances for the tokens involved (e.g., SOL and USDT).
+4. **Post‑Session Delay & Finalization**
+   - After a claim or stop, wait `miningSuccessDelayMs`.
+   - Mark final metrics (`incrementalExtraData.final = 1`) and flush one last `updateAggregatedMiningMetrics()`.
+   - **Note:** Each session’s metrics (claimed amounts, hash rates, durations, boosts) persist in the `mining_metrics` table.
 
-2. **Token Selection and Dynamic Amount Calculation:**  
-   Based on a swap configuration file, AutoPond defines which tokens to swap and sets minimum balance thresholds. It determines the swap amount by choosing from predefined arrays (which may include reward-specific amounts if rewards mode is active) and dynamically flips the token direction if the balance for the primary token falls below a set threshold.
+### Swap Flow Logic
 
-3. **Executing the Swap:**  
-   The system automates the swap operation by:
-   - Selecting the correct tokens through UI interactions.
-   - Inputting the determined swap amount.
-   - Confirming the swap transaction through Phantom.
-   
-   It includes a retry mechanism (up to three attempts) to handle transient errors such as insufficient funds or network delays.
+1. **UI Initialization & Wallet Connection**
 
-4. **Transaction Confirmation and Metrics Update:**  
-   After a successful swap, the transaction details (e.g., via Solscan) are retrieved. The in-memory swap metrics are updated to record successful rounds, volume by token, transaction fees, and any errors encountered during the process. These metrics are then aggregated and persisted to the database using `updateAggregatedSwapMetrics()`.
+   - Navigate to the swap page and wait for it to load.
+   - Trigger Phantom connect popup via `connectwallet()`, retrieve public key.
 
-5. **Cycle Completion and Summary:**  
-   The swap flow runs for a set number of rounds as defined in the configuration. Once complete, a summary report is generated that details overall performance—such as counts of successful versus failed rounds, token volumes, and fee totals.
+2. **Rewards Check**
 
-### Rewards Detector (Optional)
+   - If `enableRewardsCheck = true`, call `checkRecentWpondTransfer()` against Solana RPC.
+   - Set `swapRewardsActive` accordingly; if no rewards and `skipSwapIfNoRewards = true`, exit early.
 
-- **Activation and Operation:**  
-  When enabled (`enableRewardsCheck`), the system queries Solana for recent WPOND token transfers to the configured rewards wallet. If eligible transfers are detected, the rewards mode is activated, and the swap parameters adjust to use reward-specific amounts.
+3. **Token & Amount Setup**
 
-### Configuration Files
+   - Identify `tokenA`, `tokenB`, their mints, and low‑balance thresholds.
+   - In each round, `runTokenManager()` will:
+     - Fetch on‑chain balance (`getSolBalance`/`getSplBalance`).
+     - If balance < threshold, swap roles (`flipTokenDirection()`).
+     - Pick amount from either `[min, max]` or `[rewardMin, rewardMax]` based on `swapRewardsActive`.
 
-- **Mining Configuration:**  
-  Loaded via `loadMiningConfig()`, this file includes settings for initial delays, iteration intervals, claim thresholds, and UI button texts critical for mining operations.
+4. **Swap Rounds Loop**  
+   For `round = 1…swapRounds`:
 
-- **Swap Configuration:**  
-  Defines the tokens to swap, minimum balance thresholds, possible swap amounts, and optional rewards settings. These configurations drive the token selection logic and the overall behavior of the swap rounds.
+   - **Attempt up to 3 times**:
+     1. Simulate UI clicks (`inputTokenSelect()`, `outputTokenSelect()`) unless `turboswap` flags block re‑selection.
+     2. `setSwapAmount()` + `signtxloop()` to confirm via Phantom.
+     3. On failure, record `preSignFailures` or `postSignFailures`, re‑run token manager, retry.
+   - **Success Path**:
+     - Wait for Solscan link, print OSC8 hyperlink.
+     - Fetch and parse the on‑chain transaction to extract fees and referral amounts via `printSwapSummary()`.
+   - Persist each round’s metrics with `updateAggregatedSwapMetrics()`.
+   - Wait `swapDelayRange` before next round.
+
+5. **Round Completion**
+   - After all rounds, wait `swapRoundDelayRange`, then call `accumulateSwapMetrics()` and display a summary via `printSessionEndReport()`.
+
+### Rewards Detector Logic
+
+1. **Connect & Fetch**
+
+   - Use `solanaconfig.rpcEndpoint` to fetch recent signatures for `rewardsWalletAddress`.
+
+2. **Validate Transfers**
+
+   - Filter for `wpondTokenMint` transfers within `wpondTransferTimeThreshold`.
+   - Exclude any `discountWalletAddresses`.
+
+3. **Activate Reward Mode**
+   - If a valid transfer is found, set `swapRewardsActive = true`; swap logic will then use reward‑based amount ranges.
+
+### Claim Conditions
+
+Evaluated in every mining loop iteration:
+
+- **Standard Claim**:  
+  `hashRate === miningCompleteHashRate` **and** `unclaimed > miningCompleteUnclaimedThreshold`.
+- **Forced Claim**:  
+  `unclaimed ≥ claimMaxThreshold`.
+- **Time‑Based Claim**:  
+  `TIME ≥ claimTimeThreshold` **and** `unclaimed ≥ miningCompleteUnclaimedThreshold`.
+- **Boost Drop**:  
+  After ≥ 5 checks, if `BOOST < maxBoost`.
+- **Max Iterations**:  
+  Iterations > `maxIterations` with optional forced claim.
+
+If none apply, the bot waits `loopIterationDelayMs` and re‑evaluates.
+
+### Overall Flow
+
+1. **Initialization**
+
+   - Load `.env`, JSON configs, and set up SQLite & logging.
+   - Launch Puppeteer + Phantom extension; navigate to Pond0x.
+
+2. **Mode Selection**
+
+   - **Wizard Mode** (`wizardMode = true`): interactive menu.
+   - **Default Mode** (`wizardMode = false`): headless run of `defaultMode` for `defaultCycleCount` (0 = infinite).
+   - **Ze Bot Stays On**: headless infinite loop with auto‑reconnects and relaunch on errors.
+
+3. **Operation Execution**
+
+   - Invoke mining (`MiningSession.start()`), swapping (`swappond()`), or combined (`Mine and Swap`) per selected mode.
+
+4. **Cycle Management**
+
+   - Between full mining sessions: wait `miningSuccessDelayMs`.
+   - Between swap rounds: wait `swapRoundDelayRange`.
+
+5. **Logging & Monitoring**
+   - All metrics stream to SQLite (`mining_metrics`, `swap_metrics`).
+   - Console output via `printMessageLinesBorderBox()` and session summaries.
+   - Raw/filtered WebSocket frames optionally logged via `wsconfig` flags.y
 
 ## Installation and Setup
 
-Get AutoPond running with these steps:
+1. **Clone the Repository:**
 
-1. **Clone the Repository:** Navigate to the directory (folder) you wish to clone autopond into ( ```cd ./<desired directory>``` ) and run the following code.
    ```bash
-   git clone https://github.com/drewbie1234/AUTOPOND_V1.git
-   cd ./autopond
+   git clone https://github.com/your-username/your-repo.git
+   cd your-repo
    ```
 
-2. **Install Node.js:** Download and install Node.js (v22.13.1) 
+2. **Install Dependencies**
 
-3. **Install Dependencies:**
-   ```bash 
+   Ensure you have [Node.js](https://nodejs.org/) installed on your system. Then, install the project dependencies (see dependencies section below for more details) by running:
+
+   ```bash
    npm install
    ```
 
-4. **Set Up Environment:** There is a file called `ENV_TEMPLATE`, change its name to `.env` in the root directory. If you wish to import your PK automatically you will need to save the relevant details in this file, you can leave EXTN as is unless yopu want to provide your own phantom extension installer:
+3. **Configure the Application**
+
+   Update the configuration files in the root directory with your desired settings:
+
+   - **appconfig.json:** Controls high-level behavior (wizard mode, default operation mode, logging, cycle delay, cycle count).
+   - **miningconfig.json:** Contains settings specific to mining operations (delays, thresholds such as `miningCompleteHashRate`, `miningCompleteUnclaimedThreshold`, `claimMaxThreshold`, etc.).
+   - **solanaconfig.json:** Configures Solana network access and rewards detector parameters (`rpcEndpoint`, `wpondTransferTimeThreshold`, `rewardsWalletAddress`, `wpondTokenMint`, `discountWalletAddresses`).
+   - **swapconfig.json:** Defines token swapping parameters (token symbols, mint addresses, balance thresholds, possible swap amounts, reward-based swap amounts, etc.).
+
+   Open each JSON file in your preferred text editor and modify the values as needed, ensuring the JSON is valid.
+
+## Phantom Wallet Setup
+
+Before using AutoPond, it's essential to set up a dedicated (burner) Phantom Wallet for automation. **Do not use your primary wallet unless you have confirmed this code is safe and you understand the risks**—this minimizes risk if your environment variables are exposed. For detailed instructions on creating a burner wallet, please refer to [this guide on setting up a new Phantom Wallet](https://support.phantom.app/hc/en-us/articles/360020005092-How-do-I-create-a-new-Phantom-wallet-).
+
+1. **Install the Phantom Wallet Extension:**  
+   Download and install the Phantom Wallet extension for Chrome from [Phantom's website](https://phantom.app).
+
+2. **Create a Burner Wallet:**  
+   After installation, open the Phantom Wallet extension and follow the on-screen instructions to create a new wallet. Save your recovery phrase securely—this wallet should be used exclusively with AutoPond.
+
+3. **Configure Environment Variables:**  
+   Rename the file `ENV_TEMPLATE` to `.env` file in the project root and modify the following variables:
+   ```env
+   PK="your-burner-wallet-private-key"          # Use the private key from your burner wallet
+   PHANTOM_PW="your-wallet-password"             # (Optional) Your wallet's temorary password
+   ```
+
+## Security Disclaimer
+
+**Important:**
+
+- **Protect Your Private Keys:**  
+  Never share your private key (`PK`) or wallet password (`PHANTOM_PW`) with anyone. Ensure these values are stored securely and are not committed to version control.
+
+- **Environment Variables:**  
+  Keep sensitive information such as your private key and wallet password in a secure `.env` file, and make sure this file is excluded from version control (e.g., using a `.gitignore` file).
+
+- **Follow Best Practices:**  
+  For further guidance on wallet security and how to set up a secure burner wallet, please refer to the [Phantom Wallet Security Guide](https://support.phantom.app/hc/en-us/articles/360020005092-How-do-I-create-a-new-Phantom-wallet-) or similar trusted resources.
+
+4. **Run the Application**
+
+   Start the application by running:
 
    ```bash
-    MINER1_PK="<MINER1_PRIVATE_KEY>"
-    MINER2_PK="<MINER1_PRIVATE_KEY>"
-    MINER1_ADDRESS="<MINER1_ADDRESS>"
-    MINER2_ADDRESS="<MINER2_ADDRESS>"
-    EXTNS="extn"  
-    ```
-   
-5. **Configure Settings#:** Modify ```./config/``` to adjust any of Configure Settings defaults:
-- `appconfig.json`
-- `miningconfig.json`
-- `swapconfig.json`
-- `solanaconfig.json`
-
-6. **Run Autopond**
-  ```bash
-  npm start
-  ```
-
+   npm start
+   ```
 
 ## Dependencies
 
-AutoPond relies on these key libraries:
-- **Puppeteer:** Drives browser automation with Phantom.
-- **@solana/web3.js:** Connects to the Solana blockchain.
-- **ws:** Enables WebSocket for real-time mining checks.
-- **Inquirer:** Powers the interactive wizard.
-- **Chalk:** Styles console output.
-- **cli-table3:** Formats stats tables.
-- **dotenv:** Loads `.env` variables.
-- **fs & path:** Manages file operations.
+AutoPond relies on several libraries and tools to operate. Make sure you have [Node.js](https://nodejs.org/) (v14 or higher) installed, then install the following dependencies via npm:
 
-Install them with:
+- **[Puppeteer](https://pptr.dev/)** (`^23.11.1`): Used for browser automation.
+- **[Inquirer](https://www.npmjs.com/package/inquirer)** (`^12.4.1`): Provides an interactive command-line interface.
+- **[dotenv](https://www.npmjs.com/package/dotenv)** (`^16.4.7`): Loads environment variables from a `.env` file.
+- **[@solana/web3.js](https://www.npmjs.com/package/@solana/web3.js)** (`^1.98.0`): Enables interaction with the Solana blockchain.
+- **[ws](https://www.npmjs.com/package/ws)** (`^8.18.0`): Implements WebSocket functionality.
+- **[tslib](https://www.npmjs.com/package/tslib)** (`^2.8.1`): Contains runtime helpers for TypeScript.
+- **[TypeScript](https://www.typescriptlang.org/)** (`^5.7.2`): Used to compile the TypeScript code.
+- **[@types/inquirer](https://www.npmjs.com/package/@types/inquirer)** (`^9.0.7`): Provides TypeScript definitions for Inquirer.
+
+To install all dependencies, simply run:
+
 ```bash
 npm install
 ```
 
 ## Tips
 
-- **Stay Safe:** Always use a burner wallet to minimize risks.
-- **Tune Performance:** Adjust `cycleDelayMs` or thresholds in configs for faster or slower runs.
-- **Support the Project:** Send SOL to `3jRksPvB4EXwo737Jww5Ncd35tqw6VP3HBr31MMep9di` if AutoPond saves you time!
-
+If you wish to support the project and the many hours of time this tool will save you (think of all the grass you can touch) then please send SOL to 3jRksPvB4EXwo737Jww5Ncd35tqw6VP3HBr31MMep9di. Thanks in advance.
 
 ## License
 
-AutoPond is released under the **ISC License**, offering flexibility for use and modification. See [LICENSE](LICENSE) for full terms.
+AutoPond is licensed under the **ISC License**.  
+See the [LICENSE](LICENSE) file for details on the permissions and limitations under this license.
 
 ## Contributing
 
-We’d love your help to improve AutoPond!
+Contributions to AutoPond are welcome and appreciated! If you'd like to contribute, please follow these guidelines:
 
-- **Report Issues:** Found a bug or have an idea? Open an issue at [GitHub Issues](https://github.com/your-username/autopond/issues).
-- **Submit Changes:**
-  1. Fork the repository.
-  2. Create a branch (`feature/your-feature`).
-  3. Commit your changes with clear messages.
-  4. Push and open a pull request with a detailed description.
+1. **Fork the Repository:**  
+   Create a personal fork of the project on GitHub.
 
+2. **Create a Feature Branch:**  
+   Develop your changes in a dedicated branch (e.g., `feature/my-new-feature`).
+
+3. **Ensure Code Quality:**
+
+   - Follow the existing coding conventions.
+   - Add tests for your changes where applicable.
+   - Update documentation if needed.
+
+4. **Submit a Pull Request:**  
+   Open a pull request from your fork to the main repository. Please include a detailed description of your changes and the motivation behind them.
+
+5. **Issues & Feature Requests:**  
+   If you encounter any bugs or have suggestions for improvements, please open an issue on the [GitHub Issues](https://github.com/drewbie1234/autopond/issues) page.
+
+Thank you for helping improve AutoPond!

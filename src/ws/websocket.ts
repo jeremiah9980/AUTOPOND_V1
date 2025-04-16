@@ -1,14 +1,15 @@
 // websocket.ts
 
 import WebSocket, { Data } from "ws";
-import { API_KEY, WS_URL } from "./wsconfig";
 import { MinerStore, defaultFilter, MessageFilterFn } from "./msghandler";
 import { MinerViewUi } from "../ui/magmaviewer";
 import chalk from "chalk";
 import inquirer from "inquirer";
-
-import { logConvertedMessage } from "./logger";
 import { printTable } from "../ui/tables/printtable";
+import { logData } from "./logger";
+import { loadWsConfig } from "../utils/configloader";
+
+const wsConfig = loadWsConfig();
 
 // Miner data structure
 export interface MinerStats {
@@ -33,7 +34,7 @@ interface MinerOptions {
 export type MinerContext =
   | "📋 View Miner Summary"
   | "👁️ View Live Miner"
-  | "👁️ View Live Events" // New mode added
+  | "👁️ View Live Events"
   | "Check Active Mining";
 
 // Each viewer now includes a filter property.
@@ -218,7 +219,7 @@ export class ResponseMessage {
 // ====================================================================
 class WebSocketManager extends MinerViewUi {
   private ws: WebSocket | null = null;
-  private mbuild = new MessageBuilder(API_KEY);
+  private mbuild = new MessageBuilder(wsConfig.apiKey);
   context: MinerContext | null = null;
   heartbeatIntervalId?: NodeJS.Timeout;
   reconnectTimeoutId?: NodeJS.Timeout;
@@ -229,6 +230,9 @@ class WebSocketManager extends MinerViewUi {
   private messageListeners: ((data: any, state?: MinerStats) => void)[] = [];
   private shouldProcess: boolean = true;
   private searchAddress?: string; // Store address from wsConnect
+
+  // NEW: Flag to conditionally skip filtered logging.
+  public skipFilteredLogging: boolean = false;
 
   constructor() {
     super();
@@ -244,24 +248,21 @@ class WebSocketManager extends MinerViewUi {
   }
 
   public onMessage(callback: (data: any, state?: MinerStats) => void) {
-    if (this.ws) {
-      this.messageListeners.push(callback);
-    }
+    this.messageListeners.push(callback);
   }
 
   wsConnect(heartbeat: boolean, searchAddress?: string) {
     this.searchAddress = searchAddress?.toLowerCase(); // Store the address
-    this.ws = new WebSocket(WS_URL);
+    this.ws = new WebSocket(wsConfig.wss);
 
     this.ws?.on("open", () => {
       this.triggerOpen(heartbeat);
     });
 
     this.ws?.on("message", (data) => {
-      const messageStr = typeof data === "string" ? data : data.toString();
-      // logConvertedMessage(messageStr).catch((err) =>
-      //   console.error("Failed to log converted message:", err)
-      // );
+      if (wsConfig.enableRawLogging) {
+        logData("RawMessage", data);
+      }
       this.updateCallback(data);
     });
 
@@ -287,26 +288,35 @@ class WebSocketManager extends MinerViewUi {
 
     while (this.messageQueue.length > 0) {
       const rawData = this.messageQueue.shift()!;
+      const filterFn = this.getActiveFilter();
+      const messageStr = rawData.toString();
 
       try {
-        this.minerstore.updateMiners(rawData, this.getActiveFilter());
+        const parsed = JSON.parse(messageStr);
+        const responseMessage = new ResponseMessage(parsed);
 
-        this.messageListeners.forEach((callback) => {
+        if (
+          wsConfig.enableFilteredLogging &&
+          !this.skipFilteredLogging &&
+          filterFn(responseMessage)
+        ) {
+          await logData("FilteredMessage", responseMessage);
+        }
+
+        this.minerstore.updateMiners(rawData, filterFn);
+
+        for (const callback of this.messageListeners) {
           try {
             callback(rawData);
           } catch (err) {
             console.error("Error in onMessage callback:", err);
           }
-        });
+        }
       } catch (err) {
-        console.error(
-          "Error processing queued message:",
-          err,
-          rawData.toString()
-        );
+        console.error("Failed to process message:", err, messageStr);
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 5));
     }
 
     this.isProcessing = false;
@@ -324,7 +334,7 @@ class WebSocketManager extends MinerViewUi {
   }
 
   send(message: any | any[]) {
-    if (this.ws?.readyState === this.ws?.OPEN) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
       const msgs = Array.isArray(message) ? message : [message];
       msgs.forEach((msg: any) => this.ws?.send(JSON.stringify(msg)));
     }
@@ -364,10 +374,6 @@ class WebSocketManager extends MinerViewUi {
     this.context = null;
   }
 
-  private stopHeartBeat() {
-    clearInterval(this.heartbeatIntervalId);
-  }
-
   setReconnect(state: boolean) {
     this.shouldReconnect = state;
   }
@@ -397,6 +403,8 @@ class ActiveMining implements MinerViewer {
     return new Promise<boolean>((resolve) => {
       this.wsmanager.registerContext(this.context);
       this.wsmanager.getActiveFilter = () => this.filter;
+      // Disable filtered logging during active mining check
+      this.wsmanager.skipFilteredLogging = true;
       this.wsmanager.wsConnect(false);
       setTimeout(() => {
         this.wsmanager.close();

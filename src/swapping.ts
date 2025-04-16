@@ -1,11 +1,10 @@
 // swapping.ts
 // This module handles the swapping logic for the Pond0x platform.
-// It includes on‑chain helper functions for interacting with Solana (via @solana/web3.js)
-// and automates UI interactions with Puppeteer. Console output is styled with chalk
-// via our unified print functions.
+// It automates UI interactions with Puppeteer and performs on‑chain actions with Solana.
+// Console output is styled using chalk via our unified print functions.
 
-import { Browser, Page } from "puppeteer";
-import { d, pickRandom } from "./utils/helpers";
+import { Browser, Page, Target } from "puppeteer";
+import { d, getRandomAmount } from "./utils/helpers";
 import chalk from "chalk";
 import { Connection } from "@solana/web3.js";
 import { SwapCycleMetrics, accumulateSwapMetrics } from "./metrics/metrics";
@@ -45,20 +44,13 @@ import { handlephanpopup } from "./phantom";
 let currentFromToken: string;
 let currentFromMint: string | undefined;
 let currentThreshold: number;
-let currentFromPossibleAmounts: number[];
-let currentFromRewardAmounts: number[];
-
 let currentOutputToken: string;
 let currentOutputMint: string | undefined;
-let currentOutputPossibleAmounts: number[];
-let currentOutputRewardAmounts: number[];
 
 // Global wallet address from the connected Phantom wallet.
 let userpublickey: string;
 
 // Global flags for turboswap mode.
-// tokensAlreadySelected: once tokens are selected, skip token selection on subsequent swaps.
-// swapAmountEntered: on the first swap, input the swap amount; later, assume it remains in the UI.
 let tokensAlreadySelected = false;
 let swapAmountEntered = false;
 
@@ -67,12 +59,17 @@ let swapAmountEntered = false;
  * -------------
  * Initiates connection to the Phantom wallet by triggering a popup and retrieving the wallet's public key.
  *
- * @param {Page} page - The Puppeteer page instance.
- * @param {Browser} browser - The Puppeteer browser instance.
- * @returns {Promise<void>}
+ * @param page - The Puppeteer page instance.
+ * @param browser - The Puppeteer browser instance.
  */
-export const connectwallet = async (page: Page, browser: Browser): Promise<void> => {
-  printMessageLinesBorderBox(["💼 Starting wallet connection..."], phantomStyle);
+export const connectwallet = async (
+  page: Page,
+  browser: Browser
+): Promise<void> => {
+  printMessageLinesBorderBox(
+    ["💼 Starting wallet connection..."],
+    phantomStyle
+  );
   await d(1000);
   await wadapt(page);
   await d(3000);
@@ -80,9 +77,8 @@ export const connectwallet = async (page: Page, browser: Browser): Promise<void>
 
   // Get the connected wallet's public key.
   userpublickey = await getPhantomPublicKey(page);
-
   printMessageLinesBorderBox(
-    ["👻 Phantom wallet connected", `${userpublickey}`],
+    ["👻 Phantom wallet connected", userpublickey],
     phantomStyle
   );
 };
@@ -90,39 +86,23 @@ export const connectwallet = async (page: Page, browser: Browser): Promise<void>
 /**
  * flipTokenDirection
  * ------------------
- * Helper function to swap the current input and output token configurations.
- * Also resets the tokensAlreadySelected and swapAmountEntered flags so that new token selection and amount entry occur.
+ * Swaps the current input and output token configurations and resets selection flags.
  *
- * @param {SwapConfig} config - The swap configuration object.
- * @returns {void}
+ * @param config - The swap configuration object.
  */
 function flipTokenDirection(config: SwapConfig): void {
-  const tempToken = currentFromToken;
-  const tempMint = currentFromMint;
-  const tempPossible = currentFromPossibleAmounts;
-  const tempReward = currentFromRewardAmounts;
-
-  currentFromToken = currentOutputToken;
-  currentFromMint = currentOutputMint;
+  // Swap token symbols and mint addresses.
+  [currentFromToken, currentOutputToken] = [
+    currentOutputToken,
+    currentFromToken,
+  ];
+  [currentFromMint, currentOutputMint] = [currentOutputMint, currentFromMint];
+  // Update threshold based on the new current from-token.
   currentThreshold =
-    currentFromToken === config.tokenA
-      ? config.tokenALowThreshold
-      : config.tokenBLowThreshold;
-  currentFromPossibleAmounts =
-    currentFromToken === config.tokenA
-      ? config.tokenAPossibleAmounts
-      : config.tokenBPossibleAmounts;
-  currentFromRewardAmounts =
-    currentFromToken === config.tokenA
-      ? config.tokenARewardAmounts
-      : config.tokenBRewardAmounts;
-
-  currentOutputToken = tempToken;
-  currentOutputMint = tempMint;
-  currentOutputPossibleAmounts = tempPossible;
-  currentOutputRewardAmounts = tempReward;
-
-  // Reset both flags for the new token direction.
+    currentFromToken === (config.tokenA ?? "")
+      ? config.tokenALowThreshold ?? 0
+      : config.tokenBLowThreshold ?? 0;
+  // Reset flags.
   tokensAlreadySelected = false;
   swapAmountEntered = false;
 }
@@ -130,16 +110,15 @@ function flipTokenDirection(config: SwapConfig): void {
 /**
  * swappingroutine
  * ---------------
- * Attempts a single swap and returns an object with the result.
- * If turboswap mode is enabled and tokens have already been selected, token selection is skipped.
+ * Executes a single swap attempt.
  *
- * @param {Page} page - The Puppeteer page instance.
- * @param {Browser} browser - The Puppeteer browser instance.
- * @param {string} fromToken - The token symbol to swap from.
- * @param {string} toToken - The token symbol to swap to.
- * @param {string} amount - The swap amount as a string.
- * @param {boolean} turboswap - Flag indicating if turboswap mode is active.
- * @returns {Promise<{ success: boolean; errorType?: string; swapDetails?: any }>} Swap result details.
+ * @param page - The Puppeteer page instance.
+ * @param browser - The Puppeteer browser instance.
+ * @param fromToken - The token symbol to swap from.
+ * @param toToken - The token symbol to swap to.
+ * @param amount - The swap amount as a string.
+ * @param turboswap - Flag indicating if turboswap mode is active.
+ * @returns Swap result details.
  */
 const swappingroutine = async (
   page: Page,
@@ -155,18 +134,20 @@ const swappingroutine = async (
   if (!(turboswap && tokensAlreadySelected)) {
     if (fromToken !== "SOL") {
       await inputTokenSelect(page);
-      await d(2000);
+      await d(3000);
       await clickSelectorWtxt(page, "li", fromToken);
+      await d(2000);
     }
     await outputTokenSelect(page);
     await d(3000);
     await clickSelectorWtxt(page, "li", toToken);
+    await d(2000);
     if (turboswap) tokensAlreadySelected = true;
   }
 
   let txSuccessObj: { success: boolean; errorType?: string };
 
-  // Enter swap amount based on mode.
+  // Enter swap amount.
   if (!turboswap || (turboswap && !swapAmountEntered)) {
     txSuccessObj = (await setSwapAmount(page, amount))
       ? await signtxloop(page, browser)
@@ -176,34 +157,38 @@ const swappingroutine = async (
     txSuccessObj = await signtxloop(page, browser);
   }
 
-  const swapDetails = { from: fromToken, to: toToken, amount };
   return {
     success: txSuccessObj.success,
     errorType: txSuccessObj.success ? undefined : txSuccessObj.errorType,
-    swapDetails,
+    swapDetails: { from: fromToken, to: toToken, amount },
   };
 };
 
 /**
  * swappond
  * --------
- * Main function to execute multiple swap rounds. For each round, it:
- * - Checks wallet balance,
- * - Chooses a swap amount (using rewards amounts if rewards are active),
- * - Attempts up to 3 swap retries on any failure.
- * Metrics for each round are captured and aggregated.
+ * Executes multiple swap rounds using the provided swap configuration.
  *
- * @param {Page} page - The Puppeteer page instance.
- * @param {Browser} browser - The Puppeteer browser instance.
- * @param {SwapConfig} config - The swap configuration parameters.
- * @returns {Promise<SwapCycleMetrics>} The aggregated swap cycle metrics.
+ * @param page - The Puppeteer page instance.
+ * @param browser - The Puppeteer browser instance.
+ * @param config - The swap configuration (merged with the selected trading pair).
+ * @returns Aggregated swap cycle metrics.
  */
 export const swappond = async (
   page: Page,
   browser: Browser,
   config: SwapConfig
 ): Promise<SwapCycleMetrics> => {
-  // Reset global flags at the start of a run.
+  // Reset flags.
+  tokensAlreadySelected = false;
+  swapAmountEntered = false;
+
+  // Initialize token configuration using the selected pair.
+  currentFromToken = config.tokenA ?? "";
+  currentFromMint = config.tokenAMint;
+  currentThreshold = config.tokenALowThreshold ?? 0;
+  currentOutputToken = config.tokenB ?? "";
+  currentOutputMint = config.tokenBMint;
   tokensAlreadySelected = false;
   swapAmountEntered = false;
 
@@ -218,12 +203,16 @@ export const swappond = async (
     totalTransactionFeesSOL: 0,
     referralFeesByToken: {},
     preSignFailures: { insufficient: 0, userAbort: 0, other: 0 },
-    postSignFailures: { slippageTolerance: 0, transactionReverted: 0, other: 0 },
+    postSignFailures: {
+      slippageTolerance: 0,
+      transactionReverted: 0,
+      other: 0,
+    },
     extraSwapErrors: {},
   };
 
   try {
-    // Rewards check section: if enabled, check recent WPOND transfer.
+    // Rewards check.
     if (config.enableRewardsCheck) {
       const rewardsActive = await checkRecentWpondTransfer();
       config.swapRewardsActive = rewardsActive;
@@ -235,8 +224,6 @@ export const swappond = async (
         ],
         rewardsActive ? generalStyle : warningStyle
       );
-
-      // Exit early if rewards are not active and skipping is desired.
       if (!rewardsActive && config.skipSwapIfNoRewards) {
         printMessageLinesBorderBox(
           ["Rewards are not active. Skipping swap round."],
@@ -248,7 +235,7 @@ export const swappond = async (
       config.swapRewardsActive = false;
     }
 
-    // Get the bounding box for the "You Pay" field as a prerequisite.
+    // Get bounding box for the "You Pay" field.
     const maybeBbox = await getBoundingBox(
       page,
       ".py-5.px-4.flex.flex-col.dark\\:text-white",
@@ -260,91 +247,22 @@ export const swappond = async (
 
     await setMaxTx(page, config.maxReferralFee);
 
-    // Initialize token configurations.
-    currentFromToken = config.tokenA;
-    currentFromMint = config.tokenAMint;
-    currentThreshold = config.tokenALowThreshold;
-    currentFromPossibleAmounts = config.tokenAPossibleAmounts;
-    currentFromRewardAmounts = config.tokenARewardAmounts;
-    currentOutputToken = config.tokenB;
-    currentOutputMint = config.tokenBMint;
-    currentOutputPossibleAmounts = config.tokenBPossibleAmounts;
-    currentOutputRewardAmounts = config.tokenBRewardAmounts;
-
-    // Reset token selection flag for this cycle.
-    tokensAlreadySelected = false;
-    swapAmountEntered = false;
-
+    // Execute swap rounds.
     for (let round = 0; round < config.swapRounds; round++) {
       printMessageLinesBorderBox(
         [`=== Starting Swap Round ${round + 1} of ${config.swapRounds} ===`],
         swappingStyle
       );
 
-      const currentBalance = await getRealBalance(
-        page,
-        currentFromToken,
-        currentFromMint
-      );
-      const balanceStatus =
-        currentBalance < currentThreshold
-          ? `${currentFromToken} balance below threshold`
-          : `${currentFromToken} balance is sufficient`;
-
-      // Determine the chosen swap amount.
-      let chosenAmount: number;
-      if (config.turboswap) {
-        const amountsArray = config.swapRewardsActive
-          ? currentFromRewardAmounts
-          : currentFromPossibleAmounts;
-        chosenAmount = amountsArray[0];
-      } else {
-        chosenAmount = pickRandom(
-          config.swapRewardsActive
-            ? currentFromRewardAmounts
-            : currentFromPossibleAmounts
-        );
-      }
-
+      // Centralized token management: check balance, flip if needed, and choose an amount.
+      let chosenAmount: number = await runTokenManager(page, config);
       printMessageLinesBorderBox(
         [
-          `Current ${currentFromToken} balance: ${currentBalance}`,
-          balanceStatus,
-          `Chosen amount: ${chosenAmount}`,
+          `Current ${currentFromToken} balance updated as per token manager.`,
+          `Final chosen amount: ${chosenAmount}`,
         ],
         swappingStyle
       );
-
-      // If balance is below threshold, flip the token direction.
-      if (currentBalance < currentThreshold) {
-        flipTokenDirection(config);
-        printMessageLinesBorderBox(
-          [
-            `Flipped. Now fromToken: ${currentFromToken}, toToken: ${currentOutputToken}`,
-          ],
-          swappingStyle
-        );
-        if (!config.turboswap) {
-          chosenAmount = pickRandom(
-            config.swapRewardsActive
-              ? currentFromRewardAmounts
-              : currentFromPossibleAmounts
-          );
-          printMessageLinesBorderBox(
-            [`New chosen amount after flip: ${chosenAmount}`],
-            swappingStyle
-          );
-        } else {
-          const newAmountsArray = config.swapRewardsActive
-            ? currentFromRewardAmounts
-            : currentFromPossibleAmounts;
-          chosenAmount = newAmountsArray[0];
-          printMessageLinesBorderBox(
-            [`Reusing chosen amount after flip: ${chosenAmount}`],
-            swappingStyle
-          );
-        }
-      }
 
       let attempts = 0;
       let roundSuccess = false;
@@ -352,6 +270,7 @@ export const swappond = async (
       let referralFee = 0;
       let pair = "";
 
+      // Try up to 3 attempts.
       while (attempts < 3 && !roundSuccess) {
         attempts++;
         metrics.totalSwapAttempts++;
@@ -373,75 +292,51 @@ export const swappond = async (
           const errorKey = swapResult.errorType || "unknown";
           metrics.extraSwapErrors[errorKey] =
             (metrics.extraSwapErrors[errorKey] || 0) + 1;
-
-          if (swapResult.errorType === "insufficient") {
-            metrics.preSignFailures.insufficient++;
-            printMessageLinesBorderBox(
-              ["Pre-sign failure: insufficient balance"],
-              warningStyle
-            );
-          } else if (
-            swapResult.errorType &&
-            swapResult.errorType.startsWith("postSign")
-          ) {
-            if (swapResult.errorType === "postSignSlippage") {
-              metrics.postSignFailures.slippageTolerance++;
-            } else if (swapResult.errorType === "postSignError") {
-              metrics.postSignFailures.transactionReverted++;
-            } else {
-              metrics.postSignFailures.other++;
-            }
-            printMessageLinesBorderBox(
-              [`Post-sign failure: ${swapResult.errorType}`],
-              warningStyle
-            );
-          } else {
-            metrics.preSignFailures.other++;
-            printMessageLinesBorderBox(
-              [`Pre-sign failure: ${swapResult.errorType || "unknown"}`],
-              warningStyle
-            );
-          }
+          // Re-run token management after failure.
+          chosenAmount = await runTokenManager(page, config);
           await d(1500);
           continue;
         }
 
+        // Get the Solscan URL for a successful swap.
         let solscanUrl: string | null = null;
         try {
-          // Wait concurrently for either the Solscan TX link or an error message.
           const successSelector = "a[href*='solscan.io/tx/']";
           const errorSelector =
             "#jupiter-terminal > form > div > div.w-full.px-2 > div.flex.flex-col.h-full.w-full.mt-2 > div > div > p";
-
-          const successPromise = page.waitForSelector(successSelector, { timeout: 60000 });
-          const errorPromise = page.waitForSelector(errorSelector, { timeout: 60000 });
-
-          // Proceed with whichever element appears first.
+          const successPromise = page.waitForSelector(successSelector, {
+            timeout: 60000,
+          });
+          const errorPromise = page.waitForSelector(errorSelector, {
+            timeout: 60000,
+          });
           const element = await Promise.race([successPromise, errorPromise]);
-
-          if (!element) {
+          if (!element)
             throw new Error("No element found for either selector.");
-          }
-
-          // Determine if the element matches the error selector.
-          const isErrorElement = await page.evaluate(
-            (el, errorSelector) => el ? el.matches(errorSelector) : false,
+          const isErrorElement: boolean = await page.evaluate(
+            (el, errorSel) => (el ? el.matches(errorSel) : false),
             element,
             errorSelector
           );
-
           if (isErrorElement) {
-            const errorText = await page.evaluate(el => el ? el.innerText : "", element);
+            const errorText = await page.evaluate(
+              (el) => (el ? el.innerText : ""),
+              element
+            );
             throw new Error(errorText);
           } else {
-            solscanUrl = await page.evaluate(el => (el as HTMLAnchorElement).href, element);
+            solscanUrl = await page.evaluate(
+              (el) => (el as HTMLAnchorElement).href,
+              element
+            );
           }
         } catch (error) {
           const swapButtonText = await page.evaluate(() => {
-            const button = document.querySelector(".swapbtn") as HTMLButtonElement;
+            const button = document.querySelector(
+              ".swapbtn"
+            ) as HTMLButtonElement;
             return button ? button.innerText : "";
           });
-
           if (swapButtonText.toLowerCase().includes("swapping")) {
             printMessageLinesBorderBox(
               ["⏰ Swap still in progress after 1 minute. Reloading page..."],
@@ -497,12 +392,13 @@ export const swappond = async (
             referralFee = txReferralFee;
             metrics.totalTransactionFeesSOL += feeSOL;
             metrics.referralFeesByToken[currentFromToken] =
-              (metrics.referralFeesByToken[currentFromToken] || 0) + referralFee;
+              (metrics.referralFeesByToken[currentFromToken] || 0) +
+              referralFee;
           } catch (txError) {
             console.log(chalk.red(`Error fetching TX data: ${txError}`));
           }
         }
-      } // End of while attempts loop.
+      } // End while attempts loop.
 
       metrics.totalSwapRounds++;
       if (!roundSuccess) {
@@ -513,7 +409,7 @@ export const swappond = async (
         );
       }
 
-      // Update persistent cumulative metrics in DB after each round.
+      // Update persistent metrics.
       updateAggregatedSwapMetrics({
         totalSwapRounds: 1,
         successfulSwapRounds: roundSuccess ? 1 : 0,
@@ -523,7 +419,9 @@ export const swappond = async (
         totalTransactionFeesSOL: feeSOL,
         volumeByToken: roundSuccess ? { [currentFromToken]: chosenAmount } : {},
         swapsByToken: roundSuccess ? { [pair]: 1 } : {},
-        referralFeesByToken: roundSuccess ? { [currentFromToken]: referralFee } : {},
+        referralFeesByToken: roundSuccess
+          ? { [currentFromToken]: referralFee }
+          : {},
         preSignFailures: { ...metrics.preSignFailures },
         postSignFailures: { ...metrics.postSignFailures },
         extraSwapErrors: { ...metrics.extraSwapErrors },
@@ -531,13 +429,19 @@ export const swappond = async (
 
       // Reset round-specific counters.
       metrics.preSignFailures = { insufficient: 0, userAbort: 0, other: 0 };
-      metrics.postSignFailures = { slippageTolerance: 0, transactionReverted: 0, other: 0 };
+      metrics.postSignFailures = {
+        slippageTolerance: 0,
+        transactionReverted: 0,
+        other: 0,
+      };
       metrics.extraSwapErrors = {};
 
-      if (roundSuccess) await d(2000);
-    } // End of for rounds loop.
+      await d(...config.swapDelayRange);
+    } // End for rounds.
+    await d(...config.swapRoundDelayRange);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage: string =
+      error instanceof Error ? error.message : String(error);
     printMessageLinesBorderBox(
       ["Error in swappond setup:", errorMessage],
       warningStyle
@@ -545,7 +449,6 @@ export const swappond = async (
     metrics.extraSwapErrors[errorMessage] = 1;
   }
 
-  // Update global in-memory metrics.
   accumulateSwapMetrics(metrics);
 
   const summaryReport = {
@@ -564,21 +467,20 @@ export const swappond = async (
     "Post-Sign Failures": metrics.postSignFailures,
     "Extra Swap Errors": metrics.extraSwapErrors,
   };
-  printSessionEndReport("Swap Cycle Metrics", summaryReport);
 
+  printSessionEndReport("Swap Cycle Metrics", summaryReport);
   return metrics;
 };
 
 /**
  * getRealBalance
  * --------------
- * Retrieves the on‑chain balance for the specified token using the connected wallet's public key.
+ * Retrieves the on‑chain balance for the specified token.
  *
- * @param {Page} page - The Puppeteer page instance.
- * @param {string} tokenSymbol - The token symbol (e.g., "SOL" or SPL token).
- * @param {string} [tokenMint] - The mint address for SPL tokens; not needed for SOL.
- * @returns {Promise<number>} The current token balance.
- * @throws Will throw an error if no mint address is provided for an SPL token.
+ * @param page - The Puppeteer page instance.
+ * @param tokenSymbol - The token symbol.
+ * @param tokenMint - The mint address (if applicable).
+ * @returns The current token balance.
  */
 async function getRealBalance(
   page: Page,
@@ -597,10 +499,10 @@ async function getRealBalance(
 /**
  * signtx
  * ------
- * Inside Phantom popup, either dismiss or approve the transaction.
+ * Handles transaction signing in the Phantom popup.
  *
- * @param {Page} page - The Puppeteer page instance representing the Phantom popup.
- * @returns {Promise<string>} A string message indicating the result of the transaction signing.
+ * @param page - The Puppeteer page instance for the popup.
+ * @returns The result message.
  */
 const signtx = async (page: Page): Promise<string> => {
   await d(5000);
@@ -631,12 +533,11 @@ const signtx = async (page: Page): Promise<string> => {
 /**
  * signtxloop
  * ---------
- * Repeatedly attempts to sign the transaction in Phantom until success or max attempts reached.
- * Checks for errors or "approved" message and handles retries.
+ * Repeatedly attempts to sign the transaction until success or max attempts.
  *
- * @param {Page} page - The Puppeteer page instance.
- * @param {Browser} browser - The Puppeteer browser instance.
- * @returns {Promise<{ success: boolean; errorType?: string }>} The result of the transaction signing.
+ * @param page - The Puppeteer page instance.
+ * @param browser - The Puppeteer browser instance.
+ * @returns Transaction signing result.
  */
 export const signtxloop = async (
   page: Page,
@@ -662,7 +563,6 @@ export const signtxloop = async (
       await page.reload();
       break;
     }
-
     attempts++;
     printMessageLinesBorderBox(
       [`🔁 Attempt ${attempts} for signature...`],
@@ -677,14 +577,16 @@ export const signtxloop = async (
           reject(new Error("No popup opened within 10s"));
         }, 10000);
 
-        const onTargetCreated = async (target: any) => {
+        const onTargetCreated = async (target: Target) => {
           clearTimeout(timeoutId);
           browser.off("targetcreated", onTargetCreated);
-          resolve(await target.page());
+          const p = await target.page();
+          if (p) resolve(p);
+          else reject(new Error("Popup page not available"));
         };
 
         browser.on("targetcreated", onTargetCreated);
-        swapBtn(page).catch((err) => {
+        swapBtn(page).catch((err: Error) => {
           clearTimeout(timeoutId);
           browser.off("targetcreated", onTargetCreated);
           reject(err);
@@ -700,7 +602,7 @@ export const signtxloop = async (
 
     let resultMsg = "";
     try {
-      resultMsg = await signtx(popup!);
+      resultMsg = await signtx(popup);
       printMessageLinesBorderBox(
         [`📝 Sign message: ${resultMsg}`],
         phantomStyle
@@ -739,7 +641,7 @@ export const signtxloop = async (
         warningStyle
       );
       try {
-        await popup!.evaluate(() => {
+        await popup.evaluate(() => {
           const buttons = Array.from(document.querySelectorAll("button"));
           const retryButton = buttons.find((btn) =>
             btn.innerText.toLowerCase().includes("retry")
@@ -785,16 +687,14 @@ export const signtxloop = async (
     if (
       lowerPostError.includes("slippage") ||
       lowerPostError.includes("reverted")
-    ) {
+    )
       return { success: false, errorType: "postSignSlippage" };
-    } else if (
+    else if (
       lowerPostError.includes("fail") ||
       lowerPostError.includes("error")
-    ) {
+    )
       return { success: false, errorType: "postSignError" };
-    } else {
-      return { success: false, errorType: "other" };
-    }
+    else return { success: false, errorType: "other" };
   }
 
   return { success: true };
@@ -803,18 +703,98 @@ export const signtxloop = async (
 /**
  * checkForPostSignError
  * -----------------------
- * Looks for any error messages on the main page after the Phantom transaction has been approved.
+ * Checks for error messages on the main page after a Phantom transaction.
  *
- * @param {Page} page - The Puppeteer page instance.
- * @returns {Promise<string | null>} A string with the error message, or null if no error is found.
+ * @param page - The Puppeteer page instance.
+ * @returns An error message string if found, or null.
  */
 async function checkForPostSignError(page: Page): Promise<string | null> {
   await d(2000);
   return page.evaluate(() => {
     const errorElem = document.querySelector(".swap-error-message");
-    if (errorElem) {
-      return errorElem.textContent?.trim() || null;
-    }
-    return null;
+    return errorElem ? errorElem.textContent?.trim() || null : null;
   });
+}
+
+/**
+ * runTokenManager
+ * ---------------
+ * Checks the current balance for the "from" token and determines the swap amount.
+ * Flips token direction if balance is below the configured threshold.
+ *
+ * @param page - The Puppeteer page instance.
+ * @param config - The swap configuration parameters.
+ * @returns The chosen swap amount.
+ */
+async function runTokenManager(
+  page: Page,
+  config: SwapConfig
+): Promise<number> {
+  // Initialize token configuration if not already set.
+  if (!currentFromToken) {
+    currentFromToken = config.tokenA ?? "";
+    currentFromMint = config.tokenAMint;
+    currentThreshold = config.tokenALowThreshold ?? 0;
+    currentOutputToken = config.tokenB ?? "";
+    currentOutputMint = config.tokenBMint;
+    tokensAlreadySelected = false;
+    swapAmountEntered = false;
+  }
+
+  // Check current balance.
+  const balance = await getRealBalance(page, currentFromToken, currentFromMint);
+  printMessageLinesBorderBox(
+    [
+      `Current ${currentFromToken} balance: ${balance}`,
+      balance < currentThreshold
+        ? `Balance (${balance}) is below threshold (${currentThreshold}).`
+        : `Balance is sufficient (threshold: ${currentThreshold}).`,
+    ],
+    generalStyle
+  );
+
+  // If balance is too low, flip token direction.
+  if (balance < currentThreshold) {
+    printMessageLinesBorderBox(
+      [
+        `${currentFromToken} balance (${balance}) is below the threshold (${currentThreshold}). Flipping token direction...`,
+      ],
+      warningStyle
+    );
+    flipTokenDirection(config);
+    printMessageLinesBorderBox(
+      [
+        `After flip: fromToken is now ${currentFromToken}, toToken is ${currentOutputToken}.`,
+      ],
+      swappingStyle
+    );
+  }
+
+  let minAmount: number, maxAmount: number;
+  if (currentFromToken === (config.tokenA ?? "")) {
+    if (config.swapRewardsActive) {
+      minAmount = config.tokenARewardMin ?? 0;
+      maxAmount = config.tokenARewardMax ?? 0;
+    } else {
+      minAmount = config.tokenAMinAmount ?? 0;
+      maxAmount = config.tokenAMaxAmount ?? 0;
+    }
+  } else {
+    if (config.swapRewardsActive) {
+      minAmount = config.tokenBRewardMin ?? 0;
+      maxAmount = config.tokenBRewardMax ?? 0;
+    } else {
+      minAmount = config.tokenBMinAmount ?? 0;
+      maxAmount = config.tokenBMaxAmount ?? 0;
+    }
+  }
+
+  const chosenAmount = getRandomAmount(minAmount, maxAmount);
+  printMessageLinesBorderBox(
+    [
+      `Chosen swap amount for ${currentFromToken}: ${chosenAmount} (range: ${minAmount}-${maxAmount})`,
+    ],
+    swappingStyle
+  );
+  return chosenAmount;
 }
